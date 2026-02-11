@@ -1,0 +1,8 @@
+title: KlondikeExplorer Dev Blog
+description: Development notes for the KlondikeExplorer Klondike solver project.
+baseurl: "/KlondikeExplorer"
+url: "https://orbitalmaneuvers.github.io"
+theme: minima
+plugins:
+  - jekyll-feed
+markdown: kramdown
