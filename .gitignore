@@ -1,0 +1,52 @@
+# Delphi IDE and Build Artifacts
+*.dcu
+*.o
+*.obj
+*.exe
+*.dll
+*.lib
+*.a
+*.so
+*.dylib
+
+# Delphi Project Files
+*.dproj.local
+*.dsk
+*.dsv
+*.identcache
+*.res
+
+# Build Output Directories
+Win64/
+Win32/
+__history/
+__recovery/
+dcu/
+bin/
+
+# IDE Backup Files
+*.~*
+*.bak
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+*.lnk
+
+
+# OS Temporary Files
+*.tmp
+.swp
+.swo
+*~
+
+# Test Results
+TestResults/
+.coverage
+
