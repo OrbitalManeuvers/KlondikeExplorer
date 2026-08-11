@@ -1,0 +1,8 @@
+title: Klondike Explorer Dev Blog
+description: Development notes for the Klondike Explorer project.
+baseurl: "/KlondikeExplorer"
+url: "https://orbitalmaneuvers.github.io"
+remote_theme: jekyll/minima
+minima:
+  skin: dark
+markdown: kramdown
