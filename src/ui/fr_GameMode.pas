@@ -8,9 +8,20 @@ uses
   Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.Buttons, Vcl.ControlList,
   System.Types, System.Skia, Vcl.Skia,
 
-  u_Types, u_CardStacks, u_DealGenerators, u_Tables, u_Games, u_GameDisplays;
+  u_Types, u_CardStacks, u_DealGenerators, u_Tables, u_Games, u_TableDisplays, u_GameDisplays,
+  u_Layouts, u_CardResources;
 
 type
+//
+//  TDragState = record
+//    Active: Boolean;
+//    SourceStack: TStackId;
+//    CardIndex: Integer;
+//    Cards: TArray<TCard>;
+//    OriginalTable: TSnapshot;  // to restore on cancel
+//    LastMousePos: TPointF;
+//  end;
+
   TGameFrame = class(TContentFrame)
     pnlGameControls: TPanel;
     pcControlPages: TPageControl;
@@ -31,11 +42,22 @@ type
     procedure clDealsClick(Sender: TObject);
     procedure skTableAnimationDraw(ASender: TObject; const ACanvas: ISkCanvas;
       const ADest: TRectF; const AProgress: Double; const AOpacity: Single);
+    procedure skTableMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure skTableMouseMove(Sender: TObject; Shift: TShiftState; X,
+      Y: Integer);
+    procedure skTableMouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure skTableResize(Sender: TObject);
+
   private
     fDealGenerator: TDealGenerator;
     fPreviewDealIndex: Integer;
     fGame: TKlondikeGame;
     fDisplay: TGameDisplay;
+    fDragState: TDragState;
+    fLayout: TLayout;
+    fCardResources: TCardResources;
     procedure UpdateControls;
     procedure PreviewDeal(aIndex: Integer);
     procedure LoadDeal(aDealIndex: Integer; aTable: TTable); overload;
@@ -45,6 +67,26 @@ type
     procedure InitContent; override;
     procedure DoneContent; override;
 
+
+    // Game actions
+//    procedure DoQuickMove(const aHit: THitInfo);
+//    procedure DoUndo;
+//    procedure DoRedo;
+//    procedure DoHint;
+//    procedure DoRestart;
+//    procedure DoNewGame;
+//    procedure DoAutoComplete;
+
+    // Drag management
+//    procedure BeginDrag(const aHit: THitInfo);
+//    procedure UpdateDrag(aPos: TPointF);
+//    procedure EndDrag(aPos: TPointF);
+//    procedure CancelDrag;
+
+    // State transitions
+    procedure StartGame(aDealIndex: Integer);
+//    procedure EndGame;
+
   end;
 
 
@@ -53,7 +95,7 @@ implementation
 {$R *.dfm}
 
 uses Vcl.Themes,
-  u_Dealers;
+  u_Dealers, u_RenderUtils;
 
 { TGameFrame }
 
@@ -65,12 +107,16 @@ begin
   fDealGenerator := TDealGenerator.Create;
   fGame := TKlondikeGame.Create;
   fDisplay := TGameDisplay.Create;
+  fCardResources := TCardResources.Create;
+  TRenderUtils.SetResources(fCardResources);
 
   // UI setup
   lblDealTitle.Font.Color := StyleServices.GetStyleFontColor(sfCaptionTextNormal);
   lblDealDescription.Font.Color := StyleServices.GetStyleFontColor(sfCaptionTextInactive);
   pcControlPages.ActivePage := tsSetup;
   UpdateControls;
+
+  skTable.BackgroundColor := $FF2b7529;
 
   PreviewDeal(-1);
 end;
@@ -80,6 +126,7 @@ begin
   fDisplay.Free;
   fGame.Free;
   fDealGenerator.Free;
+  fCardResources.Free;
 
   inherited;
 end;
@@ -103,32 +150,17 @@ end;
 
 procedure TGameFrame.HandleTableChanged(Sender: TObject);
 begin
-  if Assigned(fDisplay) and Assigned(fGame) then
-    fDisplay.UpdateTable(fGame.Table);
+// this needs re-thinking to consider animations
+
+//  if Assigned(fDisplay) and Assigned(fGame) then
+//    fDisplay.UpdateTable(fGame.Table);
 end;
 
 procedure TGameFrame.btnPlayClick(Sender: TObject);
 begin
   var dealIndex := clDeals.ItemIndex;
   Assert((dealIndex >= 0) and (dealIndex < fDealGenerator.Count));
-
-  // initialize game
-  var deck := TCardStack.Create;
-  try
-    LoadDeal(dealIndex, deck);
-
-    fGame.InitializeGame(deck);
-    fGame.Table.OnChange := Self.HandleTableChanged;
-
-  finally
-    deck.Free;
-  end;
-
-  // initialize display
-
-  // switch to game controls
-  pcControlPages.ActivePage := tsGame;
-
+  StartGame(dealIndex);
 end;
 
 procedure TGameFrame.clDealsBeforeDrawItem(AIndex: Integer;
@@ -198,7 +230,55 @@ procedure TGameFrame.skTableAnimationDraw(ASender: TObject;
   const AOpacity: Single);
 begin
   if Assigned(fDisplay) then
-    fDisplay.Draw(aCanvas, TSize.Create(skTable.ClientWidth, skTable.ClientHeight));
+    fDisplay.Draw(aCanvas, fLayout);
+end;
+
+procedure TGameFrame.skTableMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  inherited;
+  //
+end;
+
+procedure TGameFrame.skTableMouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: Integer);
+begin
+  inherited;
+  //
+end;
+
+procedure TGameFrame.skTableMouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  inherited;
+  //
+end;
+
+procedure TGameFrame.skTableResize(Sender: TObject);
+begin
+  fLayout.SetSize(skTable.ClientWidth, skTable.ClientHeight);
+end;
+
+procedure TGameFrame.StartGame(aDealIndex: Integer);
+begin
+  // initialize game
+  var deck := TCardStack.Create;
+  try
+    LoadDeal(aDealIndex, deck);
+
+    fGame.InitializeGame(deck);
+    fGame.Table.OnChange := Self.HandleTableChanged; // not sure if this will be used
+    fGame.Restart;
+
+  finally
+    deck.Free;
+  end;
+
+  // initialize display
+  fDisplay.UpdateTable(fGame.Table);
+
+  // switch to game controls
+  pcControlPages.ActivePage := tsGame;
 end;
 
 end.

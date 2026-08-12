@@ -7,6 +7,11 @@ uses System.Generics.Collections,
   u_SnapshotTypes, u_SnapshotManagers;
 
 type
+  TUndoEntry = record
+    Token: TSnapshotToken;
+    Move: TMove;
+  end;
+
   // base class just owns a table
   TGame = class
   protected
@@ -23,12 +28,11 @@ type
   private
     fSnapshotManager: TSnapshotManager;
     fSnapshot: TSnapshot;
-    fUndoStack: TStack<TSnapshotToken>;
-    fRedoStack: TStack<TSnapshotToken>;
-    fMoveHistory: TList<TMove>;
+    fUndoStack: TStack<TUndoEntry>;
+    fRedoStack: TStack<TUndoEntry>;
     fHintMoves: TMoveList;
     fHintIndex: Integer;
-    fMoveCount: Integer;    //
+    fMoveCount: Integer;
   public
     constructor Create; override;
     destructor Destroy; override;
@@ -46,6 +50,7 @@ type
       out aMove: TMove): Boolean;
 
     // Hints
+    procedure BuildHintList;
     function GetNextHint(out aMove: TMove): Boolean;
     procedure ResetHints;
 
@@ -58,11 +63,18 @@ type
 
   end;
 
+function NewUndoEntry(const aToken: TSnapshotToken; const aMove: TMove): TUndoEntry;
 
 implementation
 
 uses u_CardHelpers, u_Utils, u_Dealers, u_MoveValidators, u_MoveExecutors,
-  u_TableUtils;
+  u_TableUtils, u_MoveGenerators;
+
+function NewUndoEntry(const aToken: TSnapshotToken; const aMove: TMove): TUndoEntry;
+begin
+  Result.Token := aToken;
+  Result.Move := aMove;
+end;
 
 { TGame }
 
@@ -94,16 +106,14 @@ begin
   fSnapshotManager := TSnapshotManager.Create;
   fSnapshot := TSnapshot.Create;
 
-  fUndoStack := TStack<TSnapshotToken>.Create;
-  fRedoStack := TStack<TSnapshotToken>.Create;
-  fMoveHistory := TList<TMove>.Create;
+  fUndoStack := TStack<TUndoEntry>.Create;
+  fRedoStack := TStack<TUndoEntry>.Create;
 
   fHintMoves := TMoveList.Create();
 end;
 
 destructor TKlondikeGame.Destroy;
 begin
-  fMoveHistory.Free;
   fHintMoves.Free;
   fUndoStack.Free;
   fRedoStack.Free;
@@ -121,14 +131,54 @@ begin
   begin
     // capture undo state
     fSnapshot.Capture(Table);
-    var t := fSnapshotManager.Save(fSnapshot);
-    fUndoStack.Push(t);
+    var token := fSnapshotManager.Save(fSnapshot);
+    fUndoStack.Push(NewUndoEntry(token, aMove));
+
+    // new move invalidates redo history
+    fRedoStack.Clear;
 
     // apply move
     TMoveExecutor.ExecuteMove(Table, aMove);
-    fMoveHistory.Add(aMove);
+    Inc(fMoveCount);
+    Result := True;
+
+    BuildHintList;
+  end;
+end;
+
+procedure TKlondikeGame.BuildHintList;
+begin
+  fHintIndex := -1;
+  fHintMoves.Clear;
+
+  var scratch := TMoveList.Create();
+  try
+    TMoveGenerator.GenerateMoves(Table, scratch);
+    for var m in scratch do
+      if TValidator.IsValidMove(m, Table) then
+        fHintMoves.Add(m);
+  finally
+    scratch.Free;
   end;
 
+  if fHintMoves.Count > 0 then
+    fHintIndex := 0;
+end;
+
+function TKlondikeGame.GetNextHint(out aMove: TMove): Boolean;
+begin
+  Result := False;
+
+  // fHintIndex points to the next one to use
+  if (fHintIndex >= 0) and (fHintIndex < fHintMoves.Count) then
+  begin
+    aMove := fHintMoves.Moves[fHintIndex];
+    Result := True;
+
+    Inc(fHintIndex);
+    if fHintIndex >= fHintMoves.Count then
+      fHintIndex := 0;
+  end;
 end;
 
 function TKlondikeGame.CanAutoComplete: Boolean;
@@ -254,15 +304,10 @@ begin
 
 end;
 
-function TKlondikeGame.GetNextHint(out aMove: TMove): Boolean;
-begin
-  Result := False;
-end;
-
 procedure TKlondikeGame.InitializeGame(aDeck: TCardStack);
 begin
   inherited;
-  Restart;
+//  Restart;
 end;
 
 function TKlondikeGame.IsWon: Boolean;
@@ -276,12 +321,40 @@ end;
 
 procedure TKlondikeGame.Redo;
 begin
-  //
+  if CanRedo then
+  begin
+    // capture current state for undo
+    fSnapshot.Capture(Table);
+    var undoToken := fSnapshotManager.Save(fSnapshot);
+
+    var entry := fRedoStack.Pop;
+    fUndoStack.Push(NewUndoEntry(undoToken, entry.Move));
+
+    // restore forward state
+    fSnapshotManager.Load(entry.Token, fSnapshot);
+    fSnapshot.Restore(Table);
+
+    Inc(fMoveCount);
+  end;
 end;
 
 procedure TKlondikeGame.Undo;
 begin
-  //
+  if CanUndo then
+  begin
+    // capture current state for redo
+    fSnapshot.Capture(Table);
+    var redoToken := fSnapshotManager.Save(fSnapshot);
+
+    var entry := fUndoStack.Pop;
+    fRedoStack.Push(NewUndoEntry(redoToken, entry.Move));
+
+    // restore previous state
+    fSnapshotManager.Load(entry.Token, fSnapshot);
+    fSnapshot.Restore(Table);
+
+    Dec(fMoveCount);
+  end;
 end;
 
 procedure TKlondikeGame.ResetHints;

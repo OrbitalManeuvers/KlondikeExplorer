@@ -21,7 +21,7 @@ inherited GameFrame: TGameFrame
       Top = 0
       Width = 329
       Height = 632
-      ActivePage = tsSetup
+      ActivePage = tsGame
       Align = alClient
       Style = tsFlatButtons
       TabOrder = 0
@@ -95,7 +95,7 @@ inherited GameFrame: TGameFrame
               AlignWithMargins = True
               Left = 8
               Top = 3
-              Width = 278
+              Width = -16
               Height = 25
               Margins.Left = 8
               Margins.Right = 8
@@ -109,15 +109,13 @@ inherited GameFrame: TGameFrame
               Font.Style = []
               ParentFont = False
               StyleElements = [seClient, seBorder]
-              ExplicitLeft = 0
-              ExplicitTop = 0
               ExplicitWidth = 37
             end
             object lblDealDescription: TLabel
               AlignWithMargins = True
               Left = 8
               Top = 28
-              Width = 283
+              Width = -11
               Height = 17
               Margins.Left = 8
               Margins.Top = 0
@@ -130,7 +128,6 @@ inherited GameFrame: TGameFrame
               Font.Style = []
               ParentFont = False
               StyleElements = [seClient, seBorder]
-              ExplicitLeft = 3
               ExplicitWidth = 66
             end
           end
@@ -149,11 +146,11 @@ inherited GameFrame: TGameFrame
     Width = 713
     Height = 632
     Align = alClient
-    BackgroundColor = claBlack
+    OnMouseDown = skTableMouseDown
+    OnMouseMove = skTableMouseMove
+    OnMouseUp = skTableMouseUp
+    OnResize = skTableResize
+    BackgroundColor = claSeagreen
     OnAnimationDraw = skTableAnimationDraw
-    ExplicitLeft = 416
-    ExplicitTop = 80
-    ExplicitWidth = 50
-    ExplicitHeight = 50
   end
 end

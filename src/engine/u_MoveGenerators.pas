@@ -37,7 +37,7 @@ var
   suit: TCardSuit;
   coverage: TMoveTypes;
 
-  procedure cover(aMoveType: TmoveType; handler: TMoveTypeHandler);
+  procedure cover(aMoveType: TMoveType; handler: TMoveTypeHandler);
   begin
     if Assigned(handler) then
     begin

@@ -32,7 +32,11 @@ uses
   u_Animations in 'display\u_Animations.pas',
   u_Games in 'games\u_Games.pas',
   u_DealGenerators in 'games\u_DealGenerators.pas',
-  u_RenderUtils in 'display\u_RenderUtils.pas';
+  u_RenderUtils in 'display\u_RenderUtils.pas',
+  u_Layouts in 'display\u_Layouts.pas',
+  u_DisplayConsts in 'display\u_DisplayConsts.pas',
+  u_HitTesters in 'display\u_HitTesters.pas',
+  u_CardResources in 'display\u_CardResources.pas';
 
 {$R *.res}
 
