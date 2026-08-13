@@ -4,30 +4,29 @@ interface
 
 uses u_Types, u_Tables, u_AnimationTypes, u_Animations, u_Layouts;
 
-
-// Note: No special table state needed in the display during this animation. The
-// moving card(s) remain in place while "new" copies animate.
-
 // The animation has 3 phases:
 
-// for 1/2 second, fade in yellow outline around source  bundle
-// for 1 second (regardless of distance) move bundle to target
-// for 1/2 second fade out the bundle at the new location
+// phase 1: fade in yellow outline around source  bundle
+// phase 2: move bundle to target
+// phase 3: fade out the bundle at the new location
 
 function CreateHintAnimation(aTable: TTable; aMove: TMove; const aLayout: TLayout): IAnimation;
 
 implementation
 
-uses System.Types, System.Skia, System.Generics.Collections,
-  u_RenderUtils, u_MoveHelpers;
+uses System.Types, System.UITypes, System.Skia, System.Generics.Collections,
+  System.Math,
+  u_RenderUtils, u_MoveHelpers, u_DisplayConsts;
 
 const
-  PHASE_FADE_IN = 500;
-  PHASE_MOVE = 1000;
-  PHASE_FADE_OUT = 300;
+  FADE_IN_MS = 300;
+  MOVE_MS = 500;
+  FADE_OUT_MS = 800;
 
 type
   THintAnimation = class(TAnimation)
+  private
+    procedure DrawCardBundle(aCanvas: ISkCanvas; where: TPointF; outlineOpacity: Single; groupOpacity: Single);
   protected
     function GetDuration: Cardinal; override;
     procedure Draw(aCanvas: ISkCanvas); override;
@@ -35,26 +34,39 @@ type
     Cards: TArray<TCard>;
     StartPos: TPointF;
     EndPos: TPointF;
-    HintMove: TMove;
+    CardSize: TSizeF;
+    OutlineColor: TAlphaColor;
   end;
 
 function CreateHintAnimation(aTable: TTable; aMove: TMove; const aLayout: TLayout): IAnimation;
 begin
   var anim := THintAnimation.Create;
-  anim.HintMove := aMove;
 
-  // get card bundle
-  var info := TMoveInfo.Create;
-  info.Load(aMove, aTable);
-  SetLength(anim.Cards, info.MoveCount);
-  for var i := 0 to info.MoveCards.Count - 1 do
-    anim.Cards[i] := info.MoveCards[i];
+  anim.StartPos := aLayout.Origins[aMove.Source];
+  anim.EndPos := aLayout.Origins[aMove.Target];
 
-
-  // get start pos
-  case info.Source.Category of
-    scTableau: begin end;
+  if aMove.Source in ALL_TABLEAUS then
+  begin
+    var cardIndex := aTable.Stacks[aMove.Source].Count - aMove.Count;
+    anim.StartPos.Offset(0, aLayout.TableauCardY(cardIndex));
   end;
+
+  if aMove.Source = siWaste then
+  begin
+    var count := Min(3, aTable.Waste.Count);
+    anim.StartPos.Offset(aLayout.WasteOffset * (count - 1), 0);
+  end;
+
+  if aMove.Target in ALL_TABLEAUS then
+  begin
+    var cardIndex := aTable.Stacks[aMove.Target].Count;
+    anim.EndPos.Offset(0, aLayout.TableauCardY(cardIndex));
+  end;
+
+  anim.CardSize.cx := aLayout.CardWidth;
+  anim.CardSize.cy := aLayout.CardHeight;
+  anim.OutlineColor := TAlphaColors.Hotpink;
+  aTable.Stacks[aMove.Source].GetLastCards(anim.cards, aMove.Count);
 
   Result := anim;
 end;
@@ -63,14 +75,65 @@ end;
 
 
 procedure THintAnimation.Draw(aCanvas: ISkCanvas);
+var
+  elapsed: Int64;
+  phaseProgress: Single;
+  currentPos: TPointF;
 begin
-  inherited;
+  elapsed := Self.Elapsed;
 
+  if elapsed < FADE_IN_MS then
+  begin
+    // Phase 1: fade in highlight outline at source position
+    phaseProgress := elapsed / FADE_IN_MS;
+    DrawCardBundle(aCanvas, StartPos, phaseProgress, 1.0);
+  end
+  else if elapsed < FADE_IN_MS + MOVE_MS then
+  begin
+    // Phase 2: move bundle from source to target, full outline
+    phaseProgress := (elapsed - FADE_IN_MS) / MOVE_MS;
+    currentPos.X := StartPos.X + (EndPos.X - StartPos.X) * phaseProgress;
+    currentPos.Y := StartPos.Y + (EndPos.Y - StartPos.Y) * phaseProgress;
+    DrawCardBundle(aCanvas, currentPos, 1.0, 1.0);
+  end
+  else
+  begin
+    // Phase 3: fade out at target position
+    if Self.State = asRunning then
+    begin
+      phaseProgress := (elapsed - FADE_IN_MS - MOVE_MS) / FADE_OUT_MS;
+      if phaseProgress > 1.0 then
+        phaseProgress := 1.0;
+      DrawCardBundle(aCanvas, EndPos, 1.0, 1.0 - phaseProgress);
+    end;
+  end;
 end;
+
+procedure THintAnimation.DrawCardBundle(aCanvas: ISkCanvas; where: TPointF;
+  outlineOpacity: Single; groupOpacity: Single);
+var
+  cardRect: TRectF;
+  alpha: Byte;
+begin
+  alpha := Round(groupOpacity * 255);
+  aCanvas.SaveLayerAlpha(alpha);
+  try
+    for var i := 0 to High(Cards) do
+    begin
+      cardRect := TRectF.Create(where, CardSize.cx, CardSize.cy);
+      TRenderUtils.DrawCard(aCanvas, Cards[i], cardRect, True);
+      TRenderUtils.DrawCardHighlight(aCanvas, cardRect, OutlineColor, outlineOpacity);
+      where.Offset(0, CardSize.cy * OFFSET_FRACTION);
+    end;
+  finally
+    aCanvas.Restore;
+  end;
+end;
+
 
 function THintAnimation.GetDuration: Cardinal;
 begin
-  Result := PHASE_FADE_IN + PHASE_MOVE + PHASE_FADE_OUT;
+  Result := FADE_IN_MS + FADE_OUT_MS + MOVE_MS;
 end;
 
 end.

@@ -15,6 +15,8 @@ type
       const aRect: TRectF; aFaceUp: Boolean);
     class procedure DrawCardBack(const aCanvas: ISkCanvas; const aRect: TRectF);
     class procedure DrawEmptySlot(const aCanvas: ISkCanvas; const aRect: TRectF);
+    class procedure DrawCardHighlight(const aCanvas: ISkCanvas;
+      const aRect: TRectF; aColor: TAlphaColor; aOpacity: Single);
 
     // called once by owner of resource instance
     class procedure SetResources(aRes: TCardResources);
@@ -178,9 +180,36 @@ begin
   CornerRadius := CardW * CORNER_RADIUS_FRACTION;
 
   Paint := TSkPaint.Create;
-  Paint.Color := $40808080;  // semi-transparent gray
+  Paint.Color := $10FFFFFF;  // semi-transparent gray
   Paint.Style := TSkPaintStyle.Stroke;
   Paint.StrokeWidth := SLOT_STROKE_WIDTH;
+  Paint.AntiAlias := True;
+
+  RR := TSkRoundRect.Create;
+  RR.SetRect(aRect, CornerRadius, CornerRadius);
+  aCanvas.DrawRoundRect(RR, Paint);
+end;
+
+class procedure TRenderUtils.DrawCardHighlight(const aCanvas: ISkCanvas;
+  const aRect: TRectF; aColor: TAlphaColor; aOpacity: Single);
+var
+  CardW: Single;
+  CornerRadius: Single;
+  RR: ISkRoundRect;
+  Paint: ISkPaint;
+  Alpha: Byte;
+begin
+  if aOpacity <= 0 then
+    Exit;
+
+  CardW := aRect.Width;
+  CornerRadius := CardW * CORNER_RADIUS_FRACTION;
+  Alpha := Round(aOpacity * 255);
+
+  Paint := TSkPaint.Create;
+  Paint.Color := (aColor and $00FFFFFF) or (Cardinal(Alpha) shl 24);
+  Paint.Style := TSkPaintStyle.Stroke;
+  Paint.StrokeWidth := 3.0;
   Paint.AntiAlias := True;
 
   RR := TSkRoundRect.Create;

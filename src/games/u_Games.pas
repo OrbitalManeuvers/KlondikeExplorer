@@ -157,7 +157,10 @@ begin
     TMoveGenerator.GenerateMoves(Table, scratch);
     for var m in scratch do
       if TValidator.IsValidMove(m, Table) then
-        fHintMoves.Add(m);
+      begin
+        if m.Source <> siStock then
+          fHintMoves.Add(m);
+      end;
   finally
     scratch.Free;
   end;

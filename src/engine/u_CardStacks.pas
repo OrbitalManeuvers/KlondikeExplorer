@@ -49,7 +49,8 @@ type
     function IsEmpty: Boolean;
     function HasCards: Boolean; // for the grammatically inclined
 
-    procedure GetLastCards(aList: TList<TCard>; aCount: Integer; aSteal: Boolean);
+    procedure GetLastCards(aList: TList<TCard>; aCount: Integer; aSteal: Boolean); overload;
+    procedure GetLastCards(var aArray: TArray<TCard>; aCount: Integer); overload;
 
     procedure Add(aCard: TCard);
     procedure AddFrom(aSource: TCardStack); overload;
@@ -215,6 +216,15 @@ begin
     end;
   end;
 end;
+
+procedure TCardStack.GetLastCards(var aArray: TArray<TCard>; aCount: Integer);
+begin
+  SetLength(aArray, aCount);
+  for var i := 0 to aCount - 1 do
+    aArray[i] := Self.Cards[i + (Self.Count - aCount)];
+
+end;
+
 
 function TCardStack.Last: TCard;
 begin

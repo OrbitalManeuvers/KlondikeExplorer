@@ -62,20 +62,6 @@ begin
     end;
   end;
 
-//  for var suit := Low(TCardSuit) to High(TCardSuit) do
-//  begin
-//    var r := aLayout.CardRect(aLayout.FoundationOrigins[suit]);
-//    if Table.Foundation[suit].HasCards then
-//    begin
-//      var c := Table.Foundation[suit].Last;
-//      TRenderUtils.DrawCard(aCanvas, c, r, True);
-//    end
-//    else
-//    begin
-//      TRenderUtils.DrawEmptySlot(aCanvas, r);
-//    end;
-//  end;
-
   // draw waste cards (up to 3 visible, fanned right)
   if Table.Waste.HasCards then
   begin
@@ -119,25 +105,6 @@ begin
       end;
     end;
   end;
-
-//  for var tableau := Low(TTableauIndex) to High(TTableauIndex) do
-//  begin
-//    var r := aLayout.CardRect(aLayout.TableauOrigins[tableau]);
-//    if Table.Tableau[tableau].IsEmpty then
-//    begin
-//      TRenderUtils.DrawEmptySlot(aCanvas, r);
-//    end
-//    else
-//    begin
-//      for var cardIndex := 0 to Table.Tableau[tableau].Count - 1 do
-//      begin
-//        var c := Table.Tableau[tableau].Cards[cardIndex];
-//        var isFaceUp := cardIndex >= Table.Tableau[tableau].Count - Table.Tableau[tableau].FaceUpCount;
-//        TRenderUtils.DrawCard(aCanvas, c, r, isFaceUp);
-//        r.Offset(0, aLayout.StackOffset);
-//      end;
-//    end;
-//  end;
 
 end;
 

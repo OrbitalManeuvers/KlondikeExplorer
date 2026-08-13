@@ -120,7 +120,8 @@ implementation
 
 uses Vcl.Themes,
 
-  u_Dealers, u_RenderUtils, u_HitTesters, u_MoveHelpers;
+  u_Dealers, u_RenderUtils, u_HitTesters, u_MoveHelpers, u_Animations,
+  u_HintAnimations;
 
 function InDeadZone(MouseDown, MouseUp: TPoint): Boolean;
 const
@@ -215,7 +216,14 @@ end;
 
 procedure TGameFrame.actHintExecute(Sender: TObject);
 begin
-  //
+  var hintMove: TMove;
+  if fGame.GetNextHint(hintMove) then
+  begin
+    var anim := CreateHintAnimation(fGame.Table, hintMove, fLayout);
+    fDisplay.Animation := anim;
+    anim.Start;
+  end;
+
 end;
 
 procedure TGameFrame.actRedoExecute(Sender: TObject);
@@ -382,6 +390,7 @@ begin
     fGame.InitializeGame(deck);
     fGame.Table.OnChange := Self.HandleTableChanged; // not sure if this will be used
     fGame.Restart;
+    fGame.BuildHintList;
 
   finally
     deck.Free;

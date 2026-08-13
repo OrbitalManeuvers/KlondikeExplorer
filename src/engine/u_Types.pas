@@ -65,6 +65,10 @@ type
     Value: Integer;
   end;
 
+const
+ ALL_TABLEAUS: TStackIds = [siTableau1 .. siTableau7];
+ ALL_FOUNDATIONS: TStackIds = [siFoundation1 .. siFoundation4];
+
 implementation
 
 

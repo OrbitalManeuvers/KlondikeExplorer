@@ -28,7 +28,7 @@ type
 
 implementation
 
-uses u_RenderUtils, u_Utils;
+uses u_RenderUtils, u_Utils, u_Animations;
 
 { TGameDisplay }
 
@@ -40,6 +40,15 @@ end;
 procedure TGameDisplay.Draw(aCanvas: ISkCanvas; const aLayout: TLayout);
 begin
   inherited;
+
+  if Assigned(Animation) then
+  begin
+    if Animation.State = asComplete then
+      Animation := nil
+    else
+      Animation.Draw(aCanvas);
+  end;
+
 
 
 

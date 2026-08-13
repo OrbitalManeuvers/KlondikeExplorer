@@ -21,7 +21,7 @@ inherited GameFrame: TGameFrame
       Top = 0
       Width = 329
       Height = 632
-      ActivePage = tsSetup
+      ActivePage = tsGame
       Align = alClient
       Style = tsFlatButtons
       TabOrder = 0

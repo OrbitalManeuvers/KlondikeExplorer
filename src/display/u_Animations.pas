@@ -10,9 +10,11 @@ type
   private
     fState: TAnimationState;
     fStopwatch: TStopwatch;
+    procedure CheckComplete;
   protected
     function GetDuration: Cardinal; virtual; abstract;  // ms, each descendant defines
     function Progress: Double;
+    function Elapsed: Int64;
     procedure Draw(aCanvas: ISkCanvas); virtual; abstract;
   public
     procedure Start;
@@ -35,6 +37,12 @@ begin
   Result := fState;
 end;
 
+function TAnimation.Elapsed: Int64;
+begin
+  Result := fStopWatch.ElapsedMilliseconds;
+  CheckComplete;
+end;
+
 function TAnimation.Progress: Double;
 begin
   if fState = asComplete then
@@ -42,10 +50,14 @@ begin
 
   Result := fStopwatch.ElapsedMilliseconds / GetDuration;
   if Result >= 1.0 then
-  begin
     Result := 1.0;
+  CheckComplete;
+end;
+
+procedure TAnimation.CheckComplete;
+begin
+  if (fState = asRunning) and (fStopwatch.ElapsedMilliseconds >= GetDuration) then
     fState := asComplete;
-  end;
 end;
 
 end.
