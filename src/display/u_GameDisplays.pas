@@ -40,28 +40,6 @@ end;
 procedure TGameDisplay.Draw(aCanvas: ISkCanvas; const aLayout: TLayout);
 begin
   inherited;
-//  for var foundation := Low(TCardSuit) to High(TCardSuit) do
-//  begin
-//    var r := aLayout.CardRect(aLayout.FoundationOrigins[foundation]);
-//    var c := NewCard(foundation, cvQueen);
-//    TRenderUtils.DrawCard(aCanvas, c, r, True);
-//  end;
-//
-//  for var tableau := Low(TTableauIndex) to High(TTableauIndex) do
-//  begin
-//    var r := aLayout.CardRect(aLayout.TableauOrigins[tableau]);
-//    if Table.Tableau[tableau].IsEmpty then
-//    begin
-//      TRenderUtils.DrawEmptySlot(aCanvas, r);
-//    end
-//    else
-//    begin
-//
-//    end;
-//  end;
-
-
-
 
 
 

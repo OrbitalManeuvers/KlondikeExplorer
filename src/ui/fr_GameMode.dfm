@@ -21,7 +21,7 @@ inherited GameFrame: TGameFrame
       Top = 0
       Width = 329
       Height = 632
-      ActivePage = tsGame
+      ActivePage = tsSetup
       Align = alClient
       Style = tsFlatButtons
       TabOrder = 0
@@ -63,17 +63,15 @@ inherited GameFrame: TGameFrame
             Top = 24
             Width = 105
             Height = 33
-            Caption = 'Regenerate'
-            OnClick = btnGenerateDealsClick
+            Action = actRegen
           end
-          object btnPlay: TSpeedButton
+          object btnStartGame: TSpeedButton
             Left = 8
             Top = 478
             Width = 113
             Height = 33
+            Action = actStartGame
             Anchors = [akLeft, akBottom]
-            Caption = 'Play'
-            OnClick = btnPlayClick
             ExplicitTop = 456
           end
           object clDeals: TControlList
@@ -95,7 +93,7 @@ inherited GameFrame: TGameFrame
               AlignWithMargins = True
               Left = 8
               Top = 3
-              Width = -16
+              Width = 278
               Height = 25
               Margins.Left = 8
               Margins.Right = 8
@@ -115,7 +113,7 @@ inherited GameFrame: TGameFrame
               AlignWithMargins = True
               Left = 8
               Top = 28
-              Width = -11
+              Width = 283
               Height = 17
               Margins.Left = 8
               Margins.Top = 0
@@ -137,6 +135,41 @@ inherited GameFrame: TGameFrame
         Caption = 'Game'
         ImageIndex = 1
         TabVisible = False
+        object btnUndo: TPngSpeedButton
+          Left = 16
+          Top = 40
+          Width = 65
+          Height = 33
+          Action = actUndo
+        end
+        object btnRedo: TPngSpeedButton
+          Left = 88
+          Top = 40
+          Width = 65
+          Height = 33
+          Action = actUndo
+        end
+        object btnHint: TPngSpeedButton
+          Left = 159
+          Top = 40
+          Width = 65
+          Height = 33
+          Action = actHint
+        end
+        object btnRestart: TPngSpeedButton
+          Left = 231
+          Top = 40
+          Width = 65
+          Height = 33
+          Action = actRestart
+        end
+        object btnEndGame: TPngSpeedButton
+          Left = 87
+          Top = 575
+          Width = 137
+          Height = 33
+          Action = actEndGame
+        end
       end
     end
   end
@@ -152,5 +185,37 @@ inherited GameFrame: TGameFrame
     OnResize = skTableResize
     BackgroundColor = claSeagreen
     OnAnimationDraw = skTableAnimationDraw
+  end
+  object GameActions: TActionList
+    Left = 512
+    Top = 304
+    object actRegen: TAction
+      Caption = 'Regenerate'
+      OnExecute = actRegenExecute
+    end
+    object actStartGame: TAction
+      Caption = 'Start Selected'
+      OnExecute = actStartGameExecute
+    end
+    object actUndo: TAction
+      Caption = 'Undo'
+      OnExecute = actUndoExecute
+    end
+    object actRedo: TAction
+      Caption = 'Redo'
+      OnExecute = actRedoExecute
+    end
+    object actHint: TAction
+      Caption = 'Hint'
+      OnExecute = actHintExecute
+    end
+    object actRestart: TAction
+      Caption = 'Restart'
+      OnExecute = actRestartExecute
+    end
+    object actEndGame: TAction
+      Caption = 'End Game'
+      OnExecute = actEndGameExecute
+    end
   end
 end

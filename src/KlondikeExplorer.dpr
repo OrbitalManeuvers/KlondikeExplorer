@@ -36,7 +36,8 @@ uses
   u_Layouts in 'display\u_Layouts.pas',
   u_DisplayConsts in 'display\u_DisplayConsts.pas',
   u_HitTesters in 'display\u_HitTesters.pas',
-  u_CardResources in 'display\u_CardResources.pas';
+  u_CardResources in 'display\u_CardResources.pas',
+  u_HintAnimations in 'display\u_HintAnimations.pas';
 
 {$R *.res}
 

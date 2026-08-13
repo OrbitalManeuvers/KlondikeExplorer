@@ -89,6 +89,21 @@ begin
     deal.Cards[i] := cards.Cards[i];
 
   fDeals.Add(deal);
+
+  // ---
+
+  cards.Clear;
+  TDealer.PopulateNewDeck(cards);
+  TShuffler.Shuffle(cards);
+
+  deal := Default(TDeal);
+  deal.Title := 'Random2';
+  deal.Difficulty := ddUnsolved;
+
+  for var i := 0 to cards.Count - 1 do
+    deal.Cards[i] := cards.Cards[i];
+
+  fDeals.Add(deal);
 end;
 
 procedure TDealGenerator.GenerateSolvableDeals;

@@ -48,12 +48,12 @@ end;
 procedure TTableDisplay.Draw(aCanvas: ISkCanvas; const aLayout: TLayout);
 begin
   // draw foundation cards
-  for var suit := Low(TCardSuit) to High(TCardSuit) do
+  for var stackId := siFoundation1 to siFoundation4 do
   begin
-    var r := aLayout.CardRect(aLayout.FoundationOrigins[suit]);
-    if Table.Foundation[suit].HasCards then
+    var r := aLayout.CardRect(aLayout.Origins[stackId]);
+    if Table.Stacks[stackId].HasCards then
     begin
-      var c := Table.Foundation[suit].Last;
+      var c := Table.Stacks[stackId].Last;
       TRenderUtils.DrawCard(aCanvas, c, r, True);
     end
     else
@@ -62,6 +62,20 @@ begin
     end;
   end;
 
+//  for var suit := Low(TCardSuit) to High(TCardSuit) do
+//  begin
+//    var r := aLayout.CardRect(aLayout.FoundationOrigins[suit]);
+//    if Table.Foundation[suit].HasCards then
+//    begin
+//      var c := Table.Foundation[suit].Last;
+//      TRenderUtils.DrawCard(aCanvas, c, r, True);
+//    end
+//    else
+//    begin
+//      TRenderUtils.DrawEmptySlot(aCanvas, r);
+//    end;
+//  end;
+
   // draw waste cards (up to 3 visible, fanned right)
   if Table.Waste.HasCards then
   begin
@@ -69,7 +83,7 @@ begin
     var startIndex := Table.Waste.Count - visibleCount;
     for var I := 0 to visibleCount - 1 do
     begin
-      var origin := aLayout.WasteOrigin;
+      var origin := aLayout.Origins[siWaste];
       origin.Offset(aLayout.WasteCardX(I), 0);
       var r := aLayout.CardRect(origin);
       var c := Table.Waste.Cards[startIndex + I];
@@ -79,7 +93,7 @@ begin
 
   // draw stock
   begin
-    var r := aLayout.CardRect(aLayout.StockOrigin);
+    var r := aLayout.CardRect(aLayout.Origins[siStock]);
     if Table.Stock.HasCards then
       TRenderUtils.DrawCardBack(aCanvas, r)
     else
@@ -87,24 +101,44 @@ begin
   end;
 
   // draw tableaus
-  for var tableau := Low(TTableauIndex) to High(TTableauIndex) do
+  for var stackId := siTableau1 to siTableau7 do
   begin
-    var r := aLayout.CardRect(aLayout.TableauOrigins[tableau]);
-    if Table.Tableau[tableau].IsEmpty then
+    var r := aLayout.CardRect(aLayout.Origins[stackId]);
+    if Table.Stacks[stackId].IsEmpty then
     begin
       TRenderUtils.DrawEmptySlot(aCanvas, r);
     end
     else
     begin
-      for var cardIndex := 0 to Table.Tableau[tableau].Count - 1 do
+      for var cardIndex := 0 to Table.Stacks[stackId].Count - 1 do
       begin
-        var c := Table.Tableau[tableau].Cards[cardIndex];
-        var isFaceUp := cardIndex >= Table.Tableau[tableau].Count - Table.Tableau[tableau].FaceUpCount;
+        var c := Table.Stacks[stackId].Cards[cardIndex];
+        var isFaceUp := cardIndex >= Table.Stacks[stackId].Count - Table.Stacks[stackId].FaceUpCount;
         TRenderUtils.DrawCard(aCanvas, c, r, isFaceUp);
         r.Offset(0, aLayout.StackOffset);
       end;
     end;
   end;
+
+//  for var tableau := Low(TTableauIndex) to High(TTableauIndex) do
+//  begin
+//    var r := aLayout.CardRect(aLayout.TableauOrigins[tableau]);
+//    if Table.Tableau[tableau].IsEmpty then
+//    begin
+//      TRenderUtils.DrawEmptySlot(aCanvas, r);
+//    end
+//    else
+//    begin
+//      for var cardIndex := 0 to Table.Tableau[tableau].Count - 1 do
+//      begin
+//        var c := Table.Tableau[tableau].Cards[cardIndex];
+//        var isFaceUp := cardIndex >= Table.Tableau[tableau].Count - Table.Tableau[tableau].FaceUpCount;
+//        TRenderUtils.DrawCard(aCanvas, c, r, isFaceUp);
+//        r.Offset(0, aLayout.StackOffset);
+//      end;
+//    end;
+//  end;
+
 end;
 
 procedure TTableDisplay.AdoptState(aTable: TTable);

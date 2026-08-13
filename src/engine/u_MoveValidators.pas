@@ -200,7 +200,7 @@ end;
 class function TStockRules.isValid(i: TMoveInfo): Boolean;
 begin
   // Stock only accepts recycle moves
-  Result := (i.Source.Id = siWaste) and (i.MoveCount = 0) and i.Table.Waste.HasCards;
+  Result := (i.Source.Id = siWaste) and (i.MoveCount = i.Table.Waste.Count);
 end;
 
 

@@ -111,7 +111,8 @@ begin
       aRect.Right - CardW * CORNER_INSET_X - SmallSuitSize,
       aRect.Top + CardH * CORNER_INSET_Y);
     aCanvas.Scale(SmallScale, SmallScale);
-    aCanvas.DrawPath(res.SuitPath[aCard.Suit], SuitPaint);
+    for var Part in res.SuitParts[aCard.Suit] do
+      aCanvas.DrawPath(Part, SuitPaint);
   finally
     aCanvas.Restore;
   end;
@@ -127,7 +128,8 @@ begin
   try
     aCanvas.Translate(SuitX, SuitY);
     aCanvas.Scale(Scale, Scale);
-    aCanvas.DrawPath(res.SuitPath[aCard.Suit], SuitPaint);
+    for var Part in res.SuitParts[aCard.Suit] do
+      aCanvas.DrawPath(Part, SuitPaint);
   finally
     aCanvas.Restore;
   end;

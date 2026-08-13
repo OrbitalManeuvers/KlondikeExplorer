@@ -2,14 +2,8 @@ unit u_Animations;
 
 interface
 
-uses u_AnimationTypes;
-
-
-function CreateHintAnimation(var params): IAnimation;
-
-implementation
-
-uses System.Skia, System.Diagnostics, System.TimeSpan;
+uses System.Diagnostics, System.TimeSpan, System.Skia,
+  u_AnimationTypes;
 
 type
   TAnimation = class(TInterfacedObject, IAnimation)
@@ -25,16 +19,7 @@ type
     function State: TAnimationState;
   end;
 
-  { THintAnimation }
-  THintAnimation = class(TAnimation)
-  end;
-
-
-function CreateHintAnimation(var params): IAnimation;
-begin
-  Result := nil;
-//  Result := THintAnimation.Create; // params
-end;
+implementation
 
 
 { TAnimation }

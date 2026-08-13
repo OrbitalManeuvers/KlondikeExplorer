@@ -7,9 +7,11 @@ uses
   u_Types;
 
 type
+  TSuitParts = TArray<ISkPath>;
+
   TCardResources = class
   private
-    fSuitPaths: array[TCardSuit] of ISkPath;
+    fSuitParts: array[TCardSuit] of TSuitParts;
     fCardOutline: ISkPath;
     fFontRank: ISkFont;
     fPaintRed: ISkPaint;
@@ -17,7 +19,7 @@ type
     fPaintCardBack: ISkPaint;
     fPaintCardFace: ISkPaint;
     fPaintOutline: ISkPaint;
-    function GetSuitPath(aSuit: TCardSuit): ISkPath;
+    function GetSuitParts(aSuit: TCardSuit): TSuitParts;
     procedure BuildSuitPaths;
     procedure BuildPaints;
     procedure BuildFont;
@@ -25,7 +27,7 @@ type
   public
     constructor Create;
 
-    property SuitPath[aSuit: TCardSuit]: ISkPath read GetSuitPath;
+    property SuitParts[aSuit: TCardSuit]: TSuitParts read GetSuitParts;
     property CardOutline: ISkPath read fCardOutline;
     property FontRank: ISkFont read fFontRank;
     property PaintRed: ISkPaint read fPaintRed;
@@ -56,67 +58,91 @@ begin
   BuildCardOutline;
 end;
 
-function TCardResources.GetSuitPath(aSuit: TCardSuit): ISkPath;
+function TCardResources.GetSuitParts(aSuit: TCardSuit): TSuitParts;
 begin
-  Result := fSuitPaths[aSuit];
+  Result := fSuitParts[aSuit];
 end;
 
 procedure TCardResources.BuildSuitPaths;
 var
   B: ISkPathBuilder;
 begin
-  // Heart: two arcs meeting at a point at the bottom
+  // Heart: single path, two lobes meeting at bottom point
   B := TSkPathBuilder.Create;
-  B.MoveTo(PointF(50, 85));                          // bottom point
-  B.CubicTo(PointF(15, 55), PointF(0, 30), PointF(25, 10));   // left lobe lower
-  B.CubicTo(PointF(40, -2), PointF(50, 10), PointF(50, 25));  // left lobe upper to center
-  B.MoveTo(PointF(50, 85));                          // back to bottom
-  B.CubicTo(PointF(85, 55), PointF(100, 30), PointF(75, 10)); // right lobe lower
-  B.CubicTo(PointF(60, -2), PointF(50, 10), PointF(50, 25));  // right lobe upper to center
+  B.MoveTo(PointF(50, 85));
+  B.CubicTo(PointF(15, 55), PointF(0, 30), PointF(25, 10));
+  B.CubicTo(PointF(40, -2), PointF(50, 10), PointF(50, 25));
+  B.MoveTo(PointF(50, 85));
+  B.CubicTo(PointF(85, 55), PointF(100, 30), PointF(75, 10));
+  B.CubicTo(PointF(60, -2), PointF(50, 10), PointF(50, 25));
   B.Close;
-  fSuitPaths[csHearts] := B.Detach;
+  fSuitParts[csHearts] := [B.Detach];
 
-  // Diamond: simple rhombus
+  // Diamond: single rhombus path
   B := TSkPathBuilder.Create;
-  B.MoveTo(PointF(50, 0));    // top
-  B.LineTo(PointF(85, 50));   // right
-  B.LineTo(PointF(50, 100));  // bottom
-  B.LineTo(PointF(15, 50));   // left
+  B.MoveTo(PointF(50, 0));
+  B.LineTo(PointF(85, 50));
+  B.LineTo(PointF(50, 100));
+  B.LineTo(PointF(15, 50));
   B.Close;
-  fSuitPaths[csDiamonds] := B.Detach;
+  fSuitParts[csDiamonds] := [B.Detach];
 
-  // Club: three circles + stem
+  // Club: separate paths for each part to avoid fill-rule overlap issues
+  // Stem (drawn first, extends high so circles cover its top)
   B := TSkPathBuilder.Create;
+  B.MoveTo(PointF(49, 52));
+  B.LineTo(PointF(35, 95));
+  B.LineTo(PointF(65, 95));
+  B.LineTo(PointF(51, 52));
+  B.Close;
+  var ClubStem := B.Detach;
   // Top circle
-  B.AddCircle(50, 25, 20);
-  // Left circle
-  B.AddCircle(30, 55, 20);
-  // Right circle
-  B.AddCircle(70, 55, 20);
-  // Stem
-  B.MoveTo(PointF(42, 65));
-  B.LineTo(PointF(35, 95));
-  B.LineTo(PointF(65, 95));
-  B.LineTo(PointF(58, 65));
-  B.Close;
-  fSuitPaths[csClubs] := B.Detach;
-
-  // Spade: inverted heart shape + stem
   B := TSkPathBuilder.Create;
-  B.MoveTo(PointF(50, 5));                            // top point
-  B.CubicTo(PointF(15, 35), PointF(0, 55), PointF(25, 75));   // left lobe
-  B.CubicTo(PointF(40, 88), PointF(50, 75), PointF(50, 62));  // left to center
-  B.MoveTo(PointF(50, 5));                            // back to top
-  B.CubicTo(PointF(85, 35), PointF(100, 55), PointF(75, 75)); // right lobe
-  B.CubicTo(PointF(60, 88), PointF(50, 75), PointF(50, 62));  // right to center
-  B.Close;
-  // Stem
-  B.MoveTo(PointF(42, 70));
+  B.AddCircle(50, 25, 19);
+  var ClubTop := B.Detach;
+  // Left circle
+  B := TSkPathBuilder.Create;
+  B.AddCircle(30, 55, 19);
+  var ClubLeft := B.Detach;
+  // Right circle
+  B := TSkPathBuilder.Create;
+  B.AddCircle(70, 55, 19);
+  var ClubRight := B.Detach;
+  // inner circle
+  B := TSkPathBuilder.Create;
+  B.AddCircle(50, 52, 10);
+  var ClubInner := B.Detach;
+
+  fSuitParts[csClubs] := [ClubStem, ClubInner, ClubLeft, ClubRight, ClubTop];
+
+  // Spade: separate body and stem
+  // Stem (drawn first, extends high so body covers its top)
+  B := TSkPathBuilder.Create;
+//  B.MoveTo(PointF(45, 20));
+//  B.LineTo(PointF(35, 95));
+//  B.LineTo(PointF(65, 95));
+//  B.LineTo(PointF(55, 20));
+
+  B.MoveTo(PointF(49, 52));
   B.LineTo(PointF(35, 95));
   B.LineTo(PointF(65, 95));
-  B.LineTo(PointF(58, 70));
+  B.LineTo(PointF(51, 52));
+
   B.Close;
-  fSuitPaths[csSpades] := B.Detach;
+  var SpadeStem := B.Detach;
+
+  // Body (inverted heart)
+  B := TSkPathBuilder.Create;
+  B.MoveTo(PointF(50, 5));
+  B.CubicTo(PointF(15, 35), PointF(0, 55), PointF(25, 72));
+  B.CubicTo(PointF(40, 85), PointF(50, 72), PointF(50, 59));
+
+  B.MoveTo(PointF(50, 5));
+  B.CubicTo(PointF(85, 35), PointF(100, 55), PointF(75, 72));
+  B.CubicTo(PointF(60, 85), PointF(50, 72), PointF(50, 59));
+  B.Close;
+  var SpadeBody := B.Detach;
+  fSuitParts[csSpades] := [SpadeStem, SpadeBody];
 end;
 
 procedure TCardResources.BuildPaints;

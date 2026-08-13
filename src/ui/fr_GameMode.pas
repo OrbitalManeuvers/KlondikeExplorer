@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, fr_ContentFrame, Vcl.StdCtrls,
   Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.Buttons, Vcl.ControlList,
-  System.Types, System.Skia, Vcl.Skia,
+  System.Types, System.Skia, System.Actions, Vcl.ActnList, PngSpeedButton, Vcl.Skia,
 
   u_Types, u_CardStacks, u_DealGenerators, u_Tables, u_Games, u_TableDisplays, u_GameDisplays,
   u_Layouts, u_CardResources;
@@ -31,12 +31,23 @@ type
     gbDeals: TGroupBox;
     clDeals: TControlList;
     btnGenerateDeals: TSpeedButton;
-    btnPlay: TSpeedButton;
+    btnStartGame: TSpeedButton;
     lblDealTitle: TLabel;
     lblDealDescription: TLabel;
     skTable: TSkAnimatedPaintBox;
-    procedure btnGenerateDealsClick(Sender: TObject);
-    procedure btnPlayClick(Sender: TObject);
+    btnUndo: TPngSpeedButton;
+    GameActions: TActionList;
+    actRegen: TAction;
+    actStartGame: TAction;
+    actUndo: TAction;
+    btnRedo: TPngSpeedButton;
+    actRedo: TAction;
+    actHint: TAction;
+    btnHint: TPngSpeedButton;
+    btnRestart: TPngSpeedButton;
+    actRestart: TAction;
+    actEndGame: TAction;
+    btnEndGame: TPngSpeedButton;
     procedure clDealsBeforeDrawItem(AIndex: Integer; ACanvas: TCanvas;
       ARect: TRect; AState: TOwnerDrawState);
     procedure clDealsClick(Sender: TObject);
@@ -49,6 +60,13 @@ type
     procedure skTableMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure skTableResize(Sender: TObject);
+    procedure actRegenExecute(Sender: TObject);
+    procedure actStartGameExecute(Sender: TObject);
+    procedure actUndoExecute(Sender: TObject);
+    procedure actRedoExecute(Sender: TObject);
+    procedure actHintExecute(Sender: TObject);
+    procedure actRestartExecute(Sender: TObject);
+    procedure actEndGameExecute(Sender: TObject);
 
   private
     fDealGenerator: TDealGenerator;
@@ -58,6 +76,13 @@ type
     fDragState: TDragState;
     fLayout: TLayout;
     fCardResources: TCardResources;
+
+    // mouse handling
+    fMouseIsDown: Boolean;
+    fMouseDownPos: TPoint;
+
+
+
     procedure UpdateControls;
     procedure PreviewDeal(aIndex: Integer);
     procedure LoadDeal(aDealIndex: Integer; aTable: TTable); overload;
@@ -74,7 +99,6 @@ type
 //    procedure DoRedo;
 //    procedure DoHint;
 //    procedure DoRestart;
-//    procedure DoNewGame;
 //    procedure DoAutoComplete;
 
     // Drag management
@@ -95,7 +119,16 @@ implementation
 {$R *.dfm}
 
 uses Vcl.Themes,
-  u_Dealers, u_RenderUtils;
+
+  u_Dealers, u_RenderUtils, u_HitTesters, u_MoveHelpers;
+
+function InDeadZone(MouseDown, MouseUp: TPoint): Boolean;
+const
+  zone = 3;
+begin
+  Result := (Abs(MouseDown.X - MouseUp.X) < zone) and
+    (Abs(MouseDown.Y - MouseUp.Y) < zone);
+end;
 
 { TGameFrame }
 
@@ -133,10 +166,65 @@ end;
 
 procedure TGameFrame.UpdateControls;
 begin
-  btnPlay.Enabled := clDeals.ItemIndex <> -1;
+  var inSetup := pcControlPages.ActivePage = tsSetup;
+  var inGame := not inSetup;
+
+  // setup page
+  actStartGame.Enabled := inSetup and (clDeals.ItemIndex <> -1);
+  actRegen.Enabled := inSetup;
+
+  // game page
+  actUndo.Enabled := inGame and fGame.CanUndo;
+  actRedo.Enabled := inGame and fGame.CanRedo;
+  actHint.Enabled := inGame;
+  actRestart.Enabled := inGame;
+  actEndGame.Enabled := inGame;
+
+
+
+//    actRegen: TAction;
+//    actStartGame: TAction;
+
+//    actUndo: TAction;
+//    actRedo: TAction;
+//    actHint: TAction;
+//    actRestart: TAction;
+//    actEndGame: TAction;
+
 end;
 
-procedure TGameFrame.btnGenerateDealsClick(Sender: TObject);
+procedure TGameFrame.actStartGameExecute(Sender: TObject);
+begin
+  var dealIndex := clDeals.ItemIndex;
+  Assert((dealIndex >= 0) and (dealIndex < fDealGenerator.Count));
+  StartGame(dealIndex);
+  UpdateControls;
+end;
+
+procedure TGameFrame.actUndoExecute(Sender: TObject);
+begin
+  fGame.Undo;
+  UpdateControls;
+end;
+
+procedure TGameFrame.actEndGameExecute(Sender: TObject);
+begin
+  pcControlPages.ActivePage := tsSetup;
+  UpdateControls;
+end;
+
+procedure TGameFrame.actHintExecute(Sender: TObject);
+begin
+  //
+end;
+
+procedure TGameFrame.actRedoExecute(Sender: TObject);
+begin
+  fGame.Redo;
+  UpdateControls;
+end;
+
+procedure TGameFrame.actRegenExecute(Sender: TObject);
 begin
   // populate list of deals
   clDeals.ItemCount := 0;
@@ -148,19 +236,19 @@ begin
   UpdateControls;
 end;
 
+procedure TGameFrame.actRestartExecute(Sender: TObject);
+begin
+  fGame.Restart;
+  fDisplay.UpdateTable(fGame.Table);
+  UpdateControls;
+end;
+
 procedure TGameFrame.HandleTableChanged(Sender: TObject);
 begin
 // this needs re-thinking to consider animations
 
 //  if Assigned(fDisplay) and Assigned(fGame) then
 //    fDisplay.UpdateTable(fGame.Table);
-end;
-
-procedure TGameFrame.btnPlayClick(Sender: TObject);
-begin
-  var dealIndex := clDeals.ItemIndex;
-  Assert((dealIndex >= 0) and (dealIndex < fDealGenerator.Count));
-  StartGame(dealIndex);
 end;
 
 procedure TGameFrame.clDealsBeforeDrawItem(AIndex: Integer;
@@ -236,7 +324,8 @@ end;
 procedure TGameFrame.skTableMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  inherited;
+  fMouseDownPos := Point(X, Y);
+  fMouseIsDown := True;
   //
 end;
 
@@ -250,8 +339,32 @@ end;
 procedure TGameFrame.skTableMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  inherited;
-  //
+  var where := point(X, Y);
+  if InDeadZone(fMouseDownPos, where) then
+  begin
+    // this is a click ... does it matter?
+    var hitInfo := THitTester.GetHitInfo(fLayout, fGame.Table, where);
+    if hitInfo.Valid then
+    begin
+      //
+      var autoMove := Default(TMove);
+      if fGame.GetAutoMove(hitInfo.StackId, hitInfo.CardIndex, autoMove) then
+      begin
+        //
+
+        if fGame.TryExecuteMove(autoMove) then
+        begin
+          fDisplay.UpdateTable(fGame.Table);
+          UpdateControls;
+        end;
+
+        //ShowMessage(autoMove.AsText);
+
+      end;
+    end;
+
+  end;
+  fMouseIsDown := False;
 end;
 
 procedure TGameFrame.skTableResize(Sender: TObject);

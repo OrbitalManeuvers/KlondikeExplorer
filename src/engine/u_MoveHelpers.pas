@@ -8,6 +8,7 @@ uses System.Generics.Collections,
 type
   TMoveHelper = record helper for TMove
     function GetMoveType: TMoveType;
+    function AsText: string;
   end;
 
   // info about one "side" of a move
@@ -40,7 +41,26 @@ type
 
 implementation
 
-uses u_Utils, u_CardHelpers;
+uses System.SysUtils,
+  u_Utils, u_CardHelpers;
+
+const
+  _stack_names: array[TStackId] of string = (
+    '',
+    'Waste',
+    'Tab 1',
+    'Tab 2',
+    'Tab 3',
+    'Tab 4',
+    'Tab 5',
+    'Tab 6',
+    'Tab 7',
+    'Hearts',
+    'Diamonds',
+    'Clubs',
+    'Spades'
+  );
+
 
 { TMoveHelper }
 function TMoveHelper.GetMoveType: TMoveType; // caller should cache
@@ -82,6 +102,38 @@ begin
           scTableau: Result := mtFoundationToTableau;
         end;
       end;
+  end;
+end;
+
+function TMoveHelper.AsText: string;
+const
+  fmt_move = '%d from %s to %s';
+  fmt_move_nc = '%s to %s';
+  fmt_waste = '%s to %s';
+begin
+  Result := '';
+
+  if Source = siStock then // it's a draw
+  begin
+    Result := 'Draw';
+    if Count <> 3 then
+      Result := Result + ' ' + Count.ToString;
+  end
+  else
+  begin
+    var sourceCat := IdToCategory(Source);
+
+    case sourceCat of
+      scWaste:
+        Result := Format(fmt_waste, [_stack_names[Source], _stack_names[Target]]);
+      scFoundation, scTableau:
+        begin
+          if Count > 1 then
+            Result := Format(fmt_move, [Count, _stack_names[Source], _stack_names[Target] ])
+          else
+            Result := Format(fmt_move_nc, [_stack_names[Source], _stack_names[Target] ]);
+        end;
+    end;
   end;
 end;
 

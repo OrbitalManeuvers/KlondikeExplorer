@@ -67,7 +67,8 @@ function NewUndoEntry(const aToken: TSnapshotToken; const aMove: TMove): TUndoEn
 
 implementation
 
-uses u_CardHelpers, u_Utils, u_Dealers, u_MoveValidators, u_MoveExecutors,
+uses System.Math,
+  u_CardHelpers, u_Utils, u_Dealers, u_MoveValidators, u_MoveExecutors,
   u_TableUtils, u_MoveGenerators;
 
 function NewUndoEntry(const aToken: TSnapshotToken; const aMove: TMove): TUndoEntry;
@@ -212,7 +213,7 @@ begin
           // do mtDraw
           aMove.Source := siStock;
           aMove.Target := siWaste;
-          aMove.Count := 3;
+          aMove.Count := Min(3, Table.Stock.Count);
           Exit(True);
         end
         else if Table.Waste.HasCards then
@@ -374,7 +375,16 @@ begin
 
   Table.BeginUpdate;
   try
-    TDealer.Deal(fStartingDeck, Table);
+
+    // TDealer.Deal is destructive to the source deck, so save off the original
+    var temp := TCardStack.Create;
+    try
+      temp.AddFrom(fStartingDeck);
+      TDealer.Deal(temp, Table);
+    finally
+      temp.free;
+    end;
+
   finally
     Table.EndUpdate;
   end;
