@@ -9,18 +9,17 @@ uses
   System.Types, System.Skia, System.Actions, Vcl.ActnList, PngSpeedButton, Vcl.Skia,
 
   u_Types, u_CardStacks, u_DealGenerators, u_Tables, u_Games, u_TableDisplays, u_GameDisplays,
-  u_Layouts, u_CardResources;
+  u_Layouts, u_CardResources, u_Snapshots;
 
 type
-//
-//  TDragState = record
-//    Active: Boolean;
-//    SourceStack: TStackId;
-//    CardIndex: Integer;
-//    Cards: TArray<TCard>;
-//    OriginalTable: TSnapshot;  // to restore on cancel
-//    LastMousePos: TPointF;
-//  end;
+  TDragInfo = record
+    Active: Boolean;
+    SourceStack: TStackId;
+    CardIndex: Integer;
+    Cards: TArray<TCard>;
+    OriginalTable: TSnapshot;  // to restore on cancel
+    LastMousePos: TPointF;
+  end;
 
   TGameFrame = class(TContentFrame)
     pnlGameControls: TPanel;
@@ -73,7 +72,7 @@ type
     fPreviewDealIndex: Integer;
     fGame: TKlondikeGame;
     fDisplay: TGameDisplay;
-    fDragState: TDragState;
+    fDragInfo: TDragInfo;
     fLayout: TLayout;
     fCardResources: TCardResources;
 
@@ -121,7 +120,7 @@ implementation
 uses Vcl.Themes,
 
   u_Dealers, u_RenderUtils, u_HitTesters, u_MoveHelpers, u_Animations,
-  u_HintAnimations;
+  u_HintAnimations, u_DisplayConsts;
 
 function InDeadZone(MouseDown, MouseUp: TPoint): Boolean;
 const
@@ -141,8 +140,11 @@ begin
   fDealGenerator := TDealGenerator.Create;
   fGame := TKlondikeGame.Create;
   fDisplay := TGameDisplay.Create;
+  fDisplay.PreviewTable(nil);
   fCardResources := TCardResources.Create;
   TRenderUtils.SetResources(fCardResources);
+
+  fDragInfo := Default(TDragInfo);
 
   // UI setup
   lblDealTitle.Font.Color := StyleServices.GetStyleFontColor(sfCaptionTextNormal);
@@ -150,7 +152,7 @@ begin
   pcControlPages.ActivePage := tsSetup;
   UpdateControls;
 
-  skTable.BackgroundColor := $FF2b7529;
+  skTable.BackgroundColor := COLOR_TABLE_BK;
 
   PreviewDeal(-1);
 end;
@@ -181,17 +183,6 @@ begin
   actRestart.Enabled := inGame;
   actEndGame.Enabled := inGame;
 
-
-
-//    actRegen: TAction;
-//    actStartGame: TAction;
-
-//    actUndo: TAction;
-//    actRedo: TAction;
-//    actHint: TAction;
-//    actRestart: TAction;
-//    actEndGame: TAction;
-
 end;
 
 procedure TGameFrame.actStartGameExecute(Sender: TObject);
@@ -205,12 +196,18 @@ end;
 procedure TGameFrame.actUndoExecute(Sender: TObject);
 begin
   fGame.Undo;
+
   UpdateControls;
 end;
 
 procedure TGameFrame.actEndGameExecute(Sender: TObject);
 begin
   pcControlPages.ActivePage := tsSetup;
+  fDealGenerator.Clear;
+  clDeals.ItemCount := 0;
+
+  fDisplay.PreviewTable(nil);
+
   UpdateControls;
 end;
 

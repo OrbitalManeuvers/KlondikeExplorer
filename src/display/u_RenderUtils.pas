@@ -15,8 +15,8 @@ type
       const aRect: TRectF; aFaceUp: Boolean);
     class procedure DrawCardBack(const aCanvas: ISkCanvas; const aRect: TRectF);
     class procedure DrawEmptySlot(const aCanvas: ISkCanvas; const aRect: TRectF);
-    class procedure DrawCardHighlight(const aCanvas: ISkCanvas;
-      const aRect: TRectF; aColor: TAlphaColor; aOpacity: Single);
+    class procedure DrawCardHighlight(const aCanvas: ISkCanvas; const aRect: TRectF;
+      aColor: TAlphaColor; aOpacity: Single);
 
     // called once by owner of resource instance
     class procedure SetResources(aRes: TCardResources);
@@ -56,11 +56,9 @@ var
   Font: ISkFont;
   RankText: string;
   TextBlob: ISkTextBlob;
-  Scale: Single;
   SuitSize: Single;
   SuitX, SuitY: Single;
   SmallSuitSize: Single;
-  SmallScale: Single;
 begin
   if not aFaceUp then
   begin
@@ -105,36 +103,19 @@ begin
 
   // Draw small suit icon (top-right area, below rank level)
   SmallSuitSize := CardW * SUIT_SMALL_FRACTION;
-  SmallScale := SmallSuitSize / 100;  // suit paths are in 0..100 unit space
-
-  aCanvas.Save;
-  try
-    aCanvas.Translate(
-      aRect.Right - CardW * CORNER_INSET_X - SmallSuitSize,
-      aRect.Top + CardH * CORNER_INSET_Y);
-    aCanvas.Scale(SmallScale, SmallScale);
-    for var Part in res.SuitParts[aCard.Suit] do
-      aCanvas.DrawPath(Part, SuitPaint);
-  finally
-    aCanvas.Restore;
-  end;
+  res.SuitIcons.DrawIcon(aCanvas, aCard.Suit, RectF(
+    aRect.Right - CardW * CORNER_INSET_X - SmallSuitSize,
+    aRect.Top + CardH * CORNER_INSET_Y,
+    aRect.Right - CardW * CORNER_INSET_X,
+    aRect.Top + CardH * CORNER_INSET_Y + SmallSuitSize));
 
   // Draw large suit icon (centered in remaining vertical space)
   SuitSize := CardW * SUIT_LARGE_FRACTION;
-  Scale := SuitSize / 100;  // suit paths are in 0..100 unit space
-
   SuitX := aRect.Left + (CardW - SuitSize) / 2;
   SuitY := aRect.Top + (CardH - SuitSize) / 2 + CardH * 0.10;  // nudge slightly below center
 
-  aCanvas.Save;
-  try
-    aCanvas.Translate(SuitX, SuitY);
-    aCanvas.Scale(Scale, Scale);
-    for var Part in res.SuitParts[aCard.Suit] do
-      aCanvas.DrawPath(Part, SuitPaint);
-  finally
-    aCanvas.Restore;
-  end;
+  res.SuitIcons.DrawIcon(aCanvas, aCard.Suit, RectF(
+    SuitX, SuitY, SuitX + SuitSize, SuitY + SuitSize));
 end;
 
 class procedure TRenderUtils.DrawCardBack(const aCanvas: ISkCanvas;

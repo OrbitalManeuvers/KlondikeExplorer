@@ -3,8 +3,8 @@ unit u_CardResources;
 interface
 
 uses
-  System.Types, System.UITypes, System.Skia,
-  u_Types;
+  System.Types, System.UITypes, System.Skia, System.Generics.Collections,
+  u_Types, u_IconResources;
 
 type
   TSuitParts = TArray<ISkPath>;
@@ -19,15 +19,19 @@ type
     fPaintCardBack: ISkPaint;
     fPaintCardFace: ISkPaint;
     fPaintOutline: ISkPaint;
+    fSuitIcons: TIconResources;
     function GetSuitParts(aSuit: TCardSuit): TSuitParts;
     procedure BuildSuitPaths;
     procedure BuildPaints;
     procedure BuildFont;
     procedure BuildCardOutline;
+    procedure BuildSuitIcons;
   public
     constructor Create;
+    destructor Destroy; override;
 
     property SuitParts[aSuit: TCardSuit]: TSuitParts read GetSuitParts;
+    property SuitIcons: TIconResources read fSuitIcons;
     property CardOutline: ISkPath read fCardOutline;
     property FontRank: ISkFont read fFontRank;
     property PaintRed: ISkPaint read fPaintRed;
@@ -40,7 +44,8 @@ type
 implementation
 
 uses
-  System.Math;
+  System.Math,
+  u_DisplayConsts, u_FontIconResources;
 
 const
   // Suit paths are built in a 0..100 x 0..100 unit space.
@@ -52,15 +57,28 @@ const
 constructor TCardResources.Create;
 begin
   inherited Create;
+
   BuildSuitPaths;
   BuildPaints;
   BuildFont;
   BuildCardOutline;
+  BuildSuitIcons;
+end;
+
+destructor TCardResources.Destroy;
+begin
+  fSuitIcons.Free;
+  inherited;
 end;
 
 function TCardResources.GetSuitParts(aSuit: TCardSuit): TSuitParts;
 begin
   Result := fSuitParts[aSuit];
+end;
+
+procedure TCardResources.BuildSuitIcons;
+begin
+  fSuitIcons := TFontIconResources.Create;
 end;
 
 procedure TCardResources.BuildSuitPaths;
@@ -148,12 +166,12 @@ end;
 procedure TCardResources.BuildPaints;
 begin
   fPaintRed := TSkPaint.Create;
-  fPaintRed.Color := TAlphaColors.Crimson;
+  fPaintRed.Color := COLOR_BASIC_RED;
   fPaintRed.Style := TSkPaintStyle.Fill;
   fPaintRed.AntiAlias := True;
 
   fPaintBlack := TSkPaint.Create;
-  fPaintBlack.Color := TAlphaColors.Black;
+  fPaintBlack.Color := COLOR_BASIC_BLACK;
   fPaintBlack.Style := TSkPaintStyle.Fill;
   fPaintBlack.AntiAlias := True;
 
@@ -163,7 +181,7 @@ begin
   fPaintCardFace.AntiAlias := True;
 
   fPaintCardBack := TSkPaint.Create;
-  fPaintCardBack.Color := $FF1A237E;  // dark blue
+  fPaintCardBack.Color := COLOR_CARD_BACKFILL;  // dark blue
   fPaintCardBack.Style := TSkPaintStyle.Fill;
   fPaintCardBack.AntiAlias := True;
 
@@ -178,7 +196,7 @@ procedure TCardResources.BuildFont;
 var
   Typeface: ISkTypeface;
 begin
-  Typeface := TSkTypeface.MakeDefault;
+  Typeface := TSkTypeface.MakeFromName('Arial', TSkFontStyle.Bold);
   fFontRank := TSkFont.Create(Typeface, 14);  // size 14 is a placeholder; scaled at draw time
   fFontRank.Edging := TSkFontEdging.AntiAlias;
 end;

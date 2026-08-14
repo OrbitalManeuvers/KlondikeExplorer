@@ -37,7 +37,10 @@ uses
   u_DisplayConsts in 'display\u_DisplayConsts.pas',
   u_HitTesters in 'display\u_HitTesters.pas',
   u_CardResources in 'display\u_CardResources.pas',
-  u_HintAnimations in 'display\u_HintAnimations.pas';
+  u_HintAnimations in 'display\u_HintAnimations.pas',
+  u_AnimationHelpers in 'display\u_AnimationHelpers.pas',
+  u_IconResources in 'display\u_IconResources.pas',
+  u_FontIconResources in 'display\u_FontIconResources.pas';
 
 {$R *.res}
 

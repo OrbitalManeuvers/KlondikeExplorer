@@ -43,17 +43,8 @@ begin
   for var f := Low(TContentType) to High(TContentType) do
     ContentFrames[f] := nil;
 
-  MainPages.ActivePage := tsGame;
+  MainPages.ActivePage := tsExplore;
   MainPagesChange(nil);
-
-//  var s := TSnapshotManager.Create;
-//  try
-//    var stats := s.Storage.Stats;
-//
-//  finally
-//    s.Free;
-//  end;
-
 end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
@@ -79,6 +70,7 @@ begin
     if Assigned(frameClass) then
     begin
       var f := frameClass.Create(Self);
+      f.Color := clBlack;
       f.Align := alClient;
       f.Parent := MainPages.ActivePage;
 

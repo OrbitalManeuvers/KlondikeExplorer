@@ -2,6 +2,8 @@ unit u_DisplayConsts;
 
 interface
 
+uses System.UITypes;
+
 const
   CARD_ASPECT_RATIO = 1.4;          // height = width * this
   OFFSET_FRACTION = 0.22;           // covered card shows this fraction of card height
@@ -9,6 +11,17 @@ const
   EDGE_MARGIN_FRACTION = 0.02;      // margin as fraction of control width
   COLUMN_GAP_FRACTION = 0.015;      // gap between columns as fraction of control width
   TOP_ROW_GAP_FRACTION = 0.03;      // gap between top row and tableau row as fraction of control height
+
+  COLOR_PREVIEW_BK = $FFEFF0FF;
+  COLOR_PREVIEW_GRID = $2F5C9DFF;
+  PREVIEW_ALPHA = 170;
+  COLOR_TABLE_BK = $FF2b7529;
+
+  // card colors
+  COLOR_CARD_FACE = TAlphaColors.White;
+  COLOR_CARD_BACKFILL = $FF1A237E;
+  COLOR_BASIC_BLACK = TAlphaColors.Black;
+  COLOR_BASIC_RED = TAlphaColors.Crimson;
 
 implementation
 

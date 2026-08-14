@@ -1,8 +1,12 @@
 inherited GameFrame: TGameFrame
   Width = 1050
   Height = 632
+  Color = clBlack
   Font.Height = -13
+  ParentBackground = False
+  ParentColor = False
   ParentFont = False
+  StyleElements = [seFont, seBorder]
   ExplicitWidth = 1050
   ExplicitHeight = 632
   object pnlGameControls: TPanel
@@ -93,7 +97,7 @@ inherited GameFrame: TGameFrame
               AlignWithMargins = True
               Left = 8
               Top = 3
-              Width = 278
+              Width = 37
               Height = 25
               Margins.Left = 8
               Margins.Right = 8
@@ -107,13 +111,12 @@ inherited GameFrame: TGameFrame
               Font.Style = []
               ParentFont = False
               StyleElements = [seClient, seBorder]
-              ExplicitWidth = 37
             end
             object lblDealDescription: TLabel
               AlignWithMargins = True
               Left = 8
               Top = 28
-              Width = 283
+              Width = 66
               Height = 17
               Margins.Left = 8
               Margins.Top = 0
@@ -126,7 +129,6 @@ inherited GameFrame: TGameFrame
               Font.Style = []
               ParentFont = False
               StyleElements = [seClient, seBorder]
-              ExplicitWidth = 66
             end
           end
         end
@@ -147,7 +149,7 @@ inherited GameFrame: TGameFrame
           Top = 40
           Width = 65
           Height = 33
-          Action = actUndo
+          Action = actRedo
         end
         object btnHint: TPngSpeedButton
           Left = 159

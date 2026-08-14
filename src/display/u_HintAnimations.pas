@@ -101,9 +101,9 @@ begin
     // Phase 3: fade out at target position
     if Self.State = asRunning then
     begin
-      phaseProgress := (elapsed - FADE_IN_MS - MOVE_MS) / FADE_OUT_MS;
-      if phaseProgress > 1.0 then
-        phaseProgress := 1.0;
+      phaseProgress := Min((elapsed - FADE_IN_MS - MOVE_MS) / FADE_OUT_MS, 1.0);
+//      if phaseProgress > 1.0 then
+//        phaseProgress := 1.0;
       DrawCardBundle(aCanvas, EndPos, 1.0, 1.0 - phaseProgress);
     end;
   end;

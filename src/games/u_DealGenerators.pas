@@ -24,6 +24,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    procedure Clear;
     procedure GenerateDeals(); // params?
 
     property Count: Integer read GetCount;
@@ -66,9 +67,14 @@ begin
   inherited;
 end;
 
-procedure TDealGenerator.GenerateDeals;
+procedure TDealGenerator.Clear;
 begin
   fDeals.Clear;
+end;
+
+procedure TDealGenerator.GenerateDeals;
+begin
+  Clear;
   GenerateSolvableDeals;
   GenerateRandomDeals;
 end;
