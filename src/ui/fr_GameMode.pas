@@ -9,7 +9,7 @@ uses
   System.Types, System.Skia, System.Actions, Vcl.ActnList, PngSpeedButton, Vcl.Skia,
 
   u_Types, u_CardStacks, u_DealGenerators, u_Tables, u_Games, u_TableDisplays, u_GameDisplays,
-  u_Layouts, u_CardResources, u_Snapshots;
+  u_Layouts, u_CardResources, u_Snapshots, u_MoveLists, u_AnimationTypes;
 
 type
   TDragInfo = record
@@ -17,8 +17,7 @@ type
     SourceStack: TStackId;
     CardIndex: Integer;
     Cards: TArray<TCard>;
-    OriginalTable: TSnapshot;  // to restore on cancel
-    LastMousePos: TPointF;
+    GrabOffset: TPointF;      // mouse-down position relative to card top-left
   end;
 
   TGameFrame = class(TContentFrame)
@@ -72,13 +71,17 @@ type
     fPreviewDealIndex: Integer;
     fGame: TKlondikeGame;
     fDisplay: TGameDisplay;
-    fDragInfo: TDragInfo;
     fLayout: TLayout;
     fCardResources: TCardResources;
+
+    // transient
+    fLocalTable: TTable;
 
     // mouse handling
     fMouseIsDown: Boolean;
     fMouseDownPos: TPoint;
+    fDragInfo: TDragInfo;
+    fDropTargets: TMoveList;
 
 
 
@@ -87,6 +90,8 @@ type
     procedure LoadDeal(aDealIndex: Integer; aTable: TTable); overload;
     procedure LoadDeal(aDealIndex: Integer; aDeck: TCardStack); overload;
     procedure HandleTableChanged(Sender: TObject);
+    procedure HandleAnimationComplete(Sender: TObject; const Animation: IAnimation);
+    procedure BuildDropTargets;
   public
     procedure InitContent; override;
     procedure DoneContent; override;
@@ -117,10 +122,10 @@ implementation
 
 {$R *.dfm}
 
-uses Vcl.Themes,
+uses Vcl.Themes, System.Math,
 
   u_Dealers, u_RenderUtils, u_HitTesters, u_MoveHelpers, u_Animations,
-  u_HintAnimations, u_DisplayConsts;
+  u_HintAnimations, u_DisplayConsts, u_FlybackAnimations;
 
 function InDeadZone(MouseDown, MouseUp: TPoint): Boolean;
 const
@@ -141,10 +146,14 @@ begin
   fGame := TKlondikeGame.Create;
   fDisplay := TGameDisplay.Create;
   fDisplay.PreviewTable(nil);
+  fDisplay.OnAnimateComplete := HandleAnimationComplete;
   fCardResources := TCardResources.Create;
   TRenderUtils.SetResources(fCardResources);
+  fDropTargets := TMoveList.Create;
+  fLocalTable := TTable.Create;
 
   fDragInfo := Default(TDragInfo);
+  fMouseIsDown := False;
 
   // UI setup
   lblDealTitle.Font.Color := StyleServices.GetStyleFontColor(sfCaptionTextNormal);
@@ -163,6 +172,8 @@ begin
   fGame.Free;
   fDealGenerator.Free;
   fCardResources.Free;
+  fDropTargets.Free;
+  fLocalTable.Free;
 
   inherited;
 end;
@@ -198,6 +209,13 @@ begin
   fGame.Undo;
 
   UpdateControls;
+end;
+
+procedure TGameFrame.BuildDropTargets;
+begin
+  fDropTargets.Clear;
+
+
 end;
 
 procedure TGameFrame.actEndGameExecute(Sender: TObject);
@@ -246,6 +264,22 @@ begin
   fGame.Restart;
   fDisplay.UpdateTable(fGame.Table);
   UpdateControls;
+end;
+
+procedure TGameFrame.HandleAnimationComplete(Sender: TObject;
+  const Animation: IAnimation);
+begin
+  var todoList := Animation.GetCompletionActions;
+  for var todoItem := Low(TCompletionAction) to High(TCompletionAction) do
+  begin
+    if todoItem in todoList then
+    begin
+      case todoItem of
+        caUpdateDisplay: fDisplay.UpdateTable(fGame.Table);
+
+      end;
+    end;
+  end;
 end;
 
 procedure TGameFrame.HandleTableChanged(Sender: TObject);
@@ -329,23 +363,112 @@ end;
 procedure TGameFrame.skTableMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  fMouseDownPos := Point(X, Y);
-  fMouseIsDown := True;
-  //
+  if pcControlPages.ActivePage = tsGame then
+  begin
+    fMouseDownPos := Point(X, Y);
+    fMouseIsDown := True;
+  end;
+
+
 end;
 
 procedure TGameFrame.skTableMouseMove(Sender: TObject; Shift: TShiftState; X,
   Y: Integer);
 begin
-  inherited;
-  //
+  if not fMouseIsDown then
+    Exit;
+
+  var where := point(X, Y);
+  if (not fDragInfo.Active) and InDeadZone(fMouseDownPos, where) then
+    Exit;
+
+  if not fDragInfo.Active then
+  begin
+
+    // validate we're trying to pick up a face up card
+    var hitInfo := THitTester.GetHitInfo(fLayout, fGame.Table, fMouseDownPos);
+    if (not hitInfo.Valid) or (not hitInfo.IsFaceUp) then
+    begin
+      // in this case you clicked the mouse on an invalid spot, then you dragged it.
+      // we can erase this operation's future. nothing matters until you release the mouse
+      fMouseIsDown := False;
+      Exit;
+    end;
+
+    // grab current game state
+    fGame.CopyTableTo(fLocalTable);
+
+    // assemble the drag operation
+    fDragInfo.Active := True;
+    fDragInfo.SourceStack := hitInfo.StackId;
+    fDragInfo.CardIndex := hitInfo.CardIndex;
+
+    // compute grab offset (mouse position relative to card top-left)
+    var cardOrigin := fLayout.Origins[hitInfo.StackId];
+    if hitInfo.StackId in ALL_TABLEAUS then
+      cardOrigin.Offset(0, fLayout.TableauCardY(hitInfo.CardIndex))
+    else if hitInfo.StackId = siWaste then
+    begin
+      var visIndex := Min(3, fGame.Table.Waste.Count) - 1;
+      cardOrigin.Offset(fLayout.WasteCardX(visIndex), 0);
+    end;
+    fDragInfo.GrabOffset := PointF(fMouseDownPos.X - cardOrigin.X,
+      fMouseDownPos.Y - cardOrigin.Y);
+
+    // creating drop targets requires the DragInfo
+    BuildDropTargets;
+
+    // build list of drag cards, remove from local table
+    var dragCount := fLocalTable.Stacks[hitInfo.StackId].Count - hitInfo.CardIndex;
+    fLocalTable.Stacks[hitInfo.StackId].GetLastCards(fDragInfo.Cards, dragCount, True);
+    fLocalTable.Stacks[hitInfo.StackId].FaceUpCount := 0;
+
+    // send local table to display
+    fDisplay.UpdateTable(fLocalTable);
+
+    // fall through ...
+  end;
+
+  if fDragInfo.Active then
+  begin
+    // update the display
+    var drawPos := PointF(where.X - fDragInfo.GrabOffset.X,
+      where.Y - fDragInfo.GrabOffset.Y);
+    fDisplay.SetDragOverlay(fDragInfo.Cards, fDragInfo.SourceStack, drawPos);
+
+    // if validDropTarget()
+
+  end;
+
 end;
 
 procedure TGameFrame.skTableMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
+  // if an invalid drag operation was attempted, we're done
+  if not fMouseIsDown then
+    Exit;
+
   var where := point(X, Y);
-  if InDeadZone(fMouseDownPos, where) then
+
+  if fDragInfo.Active then
+  begin
+    fDragInfo.Active := False;
+    fDisplay.ClearDragOverlay;
+
+    // For now, always show flyback animation
+    var dropPos := PointF(where.X - fDragInfo.GrabOffset.X,
+      where.Y - fDragInfo.GrabOffset.Y);
+    var homePos := PointF(fMouseDownPos.X - fDragInfo.GrabOffset.X,
+      fMouseDownPos.Y - fDragInfo.GrabOffset.Y);
+    var anim := CreateFlybackAnimation(fDragInfo.Cards, dropPos, homePos,
+      TSizeF.Create(fLayout.CardWidth, fLayout.CardHeight));
+    fDisplay.Animation := anim;
+    anim.Start;
+
+
+  end
+  else if InDeadZone(fMouseDownPos, where) then
   begin
     // this is a click ... does it matter?
     var hitInfo := THitTester.GetHitInfo(fLayout, fGame.Table, where);
@@ -355,21 +478,19 @@ begin
       var autoMove := Default(TMove);
       if fGame.GetAutoMove(hitInfo.StackId, hitInfo.CardIndex, autoMove) then
       begin
-        //
 
+        // make this into ExecuteMove(aMove: TMove);
         if fGame.TryExecuteMove(autoMove) then
         begin
           fDisplay.UpdateTable(fGame.Table);
           UpdateControls;
         end;
-
-        //ShowMessage(autoMove.AsText);
-
       end;
     end;
 
   end;
   fMouseIsDown := False;
+
 end;
 
 procedure TGameFrame.skTableResize(Sender: TObject);

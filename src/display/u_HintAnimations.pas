@@ -14,9 +14,9 @@ function CreateHintAnimation(aTable: TTable; aMove: TMove; const aLayout: TLayou
 
 implementation
 
-uses System.Types, System.UITypes, System.Skia, System.Generics.Collections,
+uses System.Types, System.UITypes, System.Skia,
   System.Math,
-  u_RenderUtils, u_MoveHelpers, u_DisplayConsts;
+  u_RenderUtils, u_MoveHelpers;
 
 const
   FADE_IN_MS = 300;
@@ -26,16 +26,13 @@ const
 type
   THintAnimation = class(TAnimation)
   private
-    procedure DrawCardBundle(aCanvas: ISkCanvas; where: TPointF; outlineOpacity: Single; groupOpacity: Single);
+    fBundle: TCardBundle;
   protected
     function GetDuration: Cardinal; override;
     procedure Draw(aCanvas: ISkCanvas); override;
   public
-    Cards: TArray<TCard>;
     StartPos: TPointF;
     EndPos: TPointF;
-    CardSize: TSizeF;
-    OutlineColor: TAlphaColor;
   end;
 
 function CreateHintAnimation(aTable: TTable; aMove: TMove; const aLayout: TLayout): IAnimation;
@@ -63,10 +60,10 @@ begin
     anim.EndPos.Offset(0, aLayout.TableauCardY(cardIndex));
   end;
 
-  anim.CardSize.cx := aLayout.CardWidth;
-  anim.CardSize.cy := aLayout.CardHeight;
-  anim.OutlineColor := TAlphaColors.Hotpink;
-  aTable.Stacks[aMove.Source].GetLastCards(anim.cards, aMove.Count);
+  anim.fBundle.CardSize.cx := aLayout.CardWidth;
+  anim.fBundle.CardSize.cy := aLayout.CardHeight;
+  anim.fBundle.OutlineColor := TAlphaColors.Hotpink;
+  aTable.Stacks[aMove.Source].GetLastCards(anim.fBundle.Cards, aMove.Count);
 
   Result := anim;
 end;
@@ -86,7 +83,7 @@ begin
   begin
     // Phase 1: fade in highlight outline at source position
     phaseProgress := elapsed / FADE_IN_MS;
-    DrawCardBundle(aCanvas, StartPos, phaseProgress, 1.0);
+    TRenderUtils.DrawCardBundle(aCanvas, fBundle, StartPos, 1.0, phaseProgress);
   end
   else if elapsed < FADE_IN_MS + MOVE_MS then
   begin
@@ -94,7 +91,7 @@ begin
     phaseProgress := (elapsed - FADE_IN_MS) / MOVE_MS;
     currentPos.X := StartPos.X + (EndPos.X - StartPos.X) * phaseProgress;
     currentPos.Y := StartPos.Y + (EndPos.Y - StartPos.Y) * phaseProgress;
-    DrawCardBundle(aCanvas, currentPos, 1.0, 1.0);
+    TRenderUtils.DrawCardBundle(aCanvas, fBundle, currentPos, 1.0, 1.0);
   end
   else
   begin
@@ -102,31 +99,9 @@ begin
     if Self.State = asRunning then
     begin
       phaseProgress := Min((elapsed - FADE_IN_MS - MOVE_MS) / FADE_OUT_MS, 1.0);
-//      if phaseProgress > 1.0 then
-//        phaseProgress := 1.0;
-      DrawCardBundle(aCanvas, EndPos, 1.0, 1.0 - phaseProgress);
+      TRenderUtils.DrawCardBundle(aCanvas, fBundle, EndPos,
+        1.0 - phaseProgress, 1.0);
     end;
-  end;
-end;
-
-procedure THintAnimation.DrawCardBundle(aCanvas: ISkCanvas; where: TPointF;
-  outlineOpacity: Single; groupOpacity: Single);
-var
-  cardRect: TRectF;
-  alpha: Byte;
-begin
-  alpha := Round(groupOpacity * 255);
-  aCanvas.SaveLayerAlpha(alpha);
-  try
-    for var i := 0 to High(Cards) do
-    begin
-      cardRect := TRectF.Create(where, CardSize.cx, CardSize.cy);
-      TRenderUtils.DrawCard(aCanvas, Cards[i], cardRect, True);
-      TRenderUtils.DrawCardHighlight(aCanvas, cardRect, OutlineColor, outlineOpacity);
-      where.Offset(0, CardSize.cy * OFFSET_FRACTION);
-    end;
-  finally
-    aCanvas.Restore;
   end;
 end;
 

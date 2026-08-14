@@ -50,7 +50,7 @@ type
     function HasCards: Boolean; // for the grammatically inclined
 
     procedure GetLastCards(aList: TList<TCard>; aCount: Integer; aSteal: Boolean); overload;
-    procedure GetLastCards(var aArray: TArray<TCard>; aCount: Integer); overload;
+    procedure GetLastCards(var aArray: TArray<TCard>; aCount: Integer; aSteal: Boolean = False); overload;
 
     procedure Add(aCard: TCard);
     procedure AddFrom(aSource: TCardStack); overload;
@@ -217,11 +217,17 @@ begin
   end;
 end;
 
-procedure TCardStack.GetLastCards(var aArray: TArray<TCard>; aCount: Integer);
+procedure TCardStack.GetLastCards(var aArray: TArray<TCard>; aCount: Integer; aSteal: Boolean);
 begin
   SetLength(aArray, aCount);
   for var i := 0 to aCount - 1 do
     aArray[i] := Self.Cards[i + (Self.Count - aCount)];
+
+  if aSteal then
+  begin
+    Self.Count := Self.Count - aCount;
+    Change;
+  end;
 
 end;
 

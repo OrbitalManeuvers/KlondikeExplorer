@@ -58,6 +58,7 @@ type
     function IsWon: Boolean;
     function CanAutoComplete: Boolean;
     procedure Restart;
+    procedure CopyTableTo(aTarget: TTable);
 
     property MoveCount: Integer read fMoveCount;
 
@@ -155,6 +156,13 @@ begin
   var scratch := TMoveList.Create();
   try
     TMoveGenerator.GenerateMoves(Table, scratch);
+
+    // !! MS Solitaire has opinions here. tableau twins don't show as a move until
+    // the covered twin can be moved to foundation.
+
+    // my system generates a move to the twin as mechanically valid,
+    // this used to get filtered out as cyclic. This needs design.
+
     for var m in scratch do
       if TValidator.IsValidMove(m, Table) then
       begin
@@ -198,6 +206,12 @@ end;
 function TKlondikeGame.CanUndo: Boolean;
 begin
   Result := not fUndoStack.IsEmpty;
+end;
+
+procedure TKlondikeGame.CopyTableTo(aTarget: TTable);
+begin
+  fSnapshot.Capture(fTable);
+  fSnapshot.Restore(aTarget);
 end;
 
 function TKlondikeGame.GetAutoMove(aSourceStack: TStackId; aCardIndex: Integer;

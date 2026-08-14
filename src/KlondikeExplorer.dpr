@@ -40,7 +40,8 @@ uses
   u_HintAnimations in 'display\u_HintAnimations.pas',
   u_AnimationHelpers in 'display\u_AnimationHelpers.pas',
   u_IconResources in 'display\u_IconResources.pas',
-  u_FontIconResources in 'display\u_FontIconResources.pas';
+  u_FontIconResources in 'display\u_FontIconResources.pas',
+  u_FlybackAnimations in 'display\u_FlybackAnimations.pas';
 
 {$R *.res}
 

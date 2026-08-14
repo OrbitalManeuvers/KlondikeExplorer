@@ -7,6 +7,12 @@ uses
   u_Types, u_CardResources;
 
 type
+  TCardBundle = record
+    Cards: TArray<TCard>;
+    CardSize: TSizeF;
+    OutlineColor: TAlphaColor;
+  end;
+
   TRenderUtils = class
   private
     class var res: TCardResources;
@@ -17,6 +23,9 @@ type
     class procedure DrawEmptySlot(const aCanvas: ISkCanvas; const aRect: TRectF);
     class procedure DrawCardHighlight(const aCanvas: ISkCanvas; const aRect: TRectF;
       aColor: TAlphaColor; aOpacity: Single);
+    class procedure DrawCardBundle(const aCanvas: ISkCanvas;
+      const aBundle: TCardBundle; aWhere: TPointF;
+      aGroupOpacity: Single = 1.0; aOutlineOpacity: Single = 0.0);
 
     // called once by owner of resource instance
     class procedure SetResources(aRes: TCardResources);
@@ -25,7 +34,7 @@ type
 implementation
 
 uses
-  System.Math, u_CardHelpers;
+  System.Math, u_CardHelpers, u_DisplayConsts;
 
 const
   // Proportions relative to card width/height for element placement
@@ -196,6 +205,29 @@ begin
   RR := TSkRoundRect.Create;
   RR.SetRect(aRect, CornerRadius, CornerRadius);
   aCanvas.DrawRoundRect(RR, Paint);
+end;
+
+class procedure TRenderUtils.DrawCardBundle(const aCanvas: ISkCanvas;
+  const aBundle: TCardBundle; aWhere: TPointF;
+  aGroupOpacity: Single; aOutlineOpacity: Single);
+var
+  CardRect: TRectF;
+  Alpha: Byte;
+begin
+  Alpha := Round(aGroupOpacity * 255);
+  aCanvas.SaveLayerAlpha(Alpha);
+  try
+    for var i := 0 to High(aBundle.Cards) do
+    begin
+      CardRect := TRectF.Create(aWhere, aBundle.CardSize.cx, aBundle.CardSize.cy);
+      DrawCard(aCanvas, aBundle.Cards[i], CardRect, True);
+      if aOutlineOpacity > 0 then
+        DrawCardHighlight(aCanvas, CardRect, aBundle.OutlineColor, aOutlineOpacity);
+      aWhere.Offset(0, aBundle.CardSize.cy * OFFSET_FRACTION);
+    end;
+  finally
+    aCanvas.Restore;
+  end;
 end;
 
 end.

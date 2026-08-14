@@ -16,7 +16,9 @@ type
     function Progress: Double;
     function Elapsed: Int64;
     procedure Draw(aCanvas: ISkCanvas); virtual; abstract;
+    function GetCompletionActions: TCompletionActions;
   public
+    CompletionActions: TCompletionActions;
     procedure Start;
     function State: TAnimationState;
   end;
@@ -41,6 +43,11 @@ function TAnimation.Elapsed: Int64;
 begin
   Result := fStopWatch.ElapsedMilliseconds;
   CheckComplete;
+end;
+
+function TAnimation.GetCompletionActions: TCompletionActions;
+begin
+  Result := Self.CompletionActions;
 end;
 
 function TAnimation.Progress: Double;
