@@ -41,7 +41,8 @@ uses
   u_AnimationHelpers in 'display\u_AnimationHelpers.pas',
   u_IconResources in 'display\u_IconResources.pas',
   u_FontIconResources in 'display\u_FontIconResources.pas',
-  u_FlybackAnimations in 'display\u_FlybackAnimations.pas';
+  u_FlybackAnimations in 'display\u_FlybackAnimations.pas',
+  u_MoveAnimations in 'display\u_MoveAnimations.pas';
 
 {$R *.res}
 

@@ -84,14 +84,13 @@ type
     fMouseDownPos: TPoint;
     fDragInfo: TDragInfo;
 
-
-
     procedure UpdateControls;
     procedure PreviewDeal(aIndex: Integer);
     procedure LoadDeal(aDealIndex: Integer; aTable: TTable); overload;
     procedure LoadDeal(aDealIndex: Integer; aDeck: TCardStack); overload;
     procedure HandleTableChanged(Sender: TObject);
     procedure HandleAnimationComplete(Sender: TObject; const Animation: IAnimation);
+    procedure DoExecuteMove(aMove: TMove; aImmediate: Boolean = False);
   public
     procedure InitContent; override;
     procedure DoneContent; override;
@@ -125,7 +124,7 @@ implementation
 uses Vcl.Themes, System.Math,
 
   u_Dealers, u_RenderUtils, u_HitTesters, u_MoveHelpers, u_Animations,
-  u_HintAnimations, u_DisplayConsts, u_FlybackAnimations,
+  u_HintAnimations, u_DisplayConsts, u_FlybackAnimations, u_MoveAnimations,
   u_MoveGenerators, u_MoveValidators, u_Utils;
 
 function InDeadZone(MouseDown, MouseUp: TPoint): Boolean;
@@ -141,6 +140,7 @@ end;
 procedure TGameFrame.InitContent;
 begin
   inherited;
+  RandSeed := 12345;
 
   // lifetime assets
   fDealGenerator := TDealGenerator.Create;
@@ -268,7 +268,11 @@ begin
     if todoItem in todoList then
     begin
       case todoItem of
-        caUpdateDisplay: fDisplay.UpdateTable(fGame.Table);
+        caUpdateDisplay:
+          begin
+            fDisplay.UpdateTable(fGame.Table);
+            UpdateControls;
+          end;
 
       end;
     end;
@@ -359,6 +363,52 @@ begin
     fDisplay.Draw(aCanvas, fLayout);
 end;
 
+procedure TGameFrame.DoExecuteMove(aMove: TMove; aImmediate: Boolean);
+begin
+  // get current table state
+  fGame.CopyTableTo(fLocalTable);
+
+  // ensure we can execute the move
+  if not fGame.TryExecuteMove(aMove) then
+    Exit;
+
+  // temp
+  if aImmediate or (aMove.Source = siStock) or (aMove.Target = siStock) then
+  begin
+    fDisplay.UpdateTable(fGame.Table);
+    UpdateControls;
+    Exit;
+  end;
+
+  // remove and save the source cards from the local table
+  var cards: TArray<TCard>;
+  fLocalTable.Stacks[aMove.Source].GetLastCards(cards, aMove.Count, True);
+  fLocalTable.Stacks[aMove.Source].FaceUpCount := fLocalTable.Stacks[aMove.Source].FaceUpCount - aMove.Count;
+
+  // this is the table we want to display until the animation completes
+  fDisplay.UpdateTable(fLocalTable);
+
+  // create move anim
+  var startPos := fLayout.Origins[aMove.Source];
+  if StackIdToCategory(aMove.Source) = scTableau then
+  begin
+    var offset := fLayout.TableauCardY(fLocalTable.Stacks[aMove.Source].Count);
+    startPos.Offset(0, offset);
+  end;
+
+  var endPos: TPointF := fLayout.Origins[aMove.Target];
+  if StackIdToCategory(aMove.Target) = scTableau then
+  begin
+    var offset := fLayout.TableauCardY(fLocalTable.Stacks[aMove.Target].Count);
+    endPos.Offset(0, offset);
+  end;
+
+  var anim := CreateMoveAnimation(cards, startPos, endPos, TSizeF.Create(fLayout.CardWidth, fLayout.CardHeight));
+  fDisplay.Animation := anim;
+  anim.Start;
+
+end;
+
 procedure TGameFrame.skTableMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
@@ -419,7 +469,7 @@ begin
     // build list of drag cards, remove from local table
     fDragInfo.CardCount := fLocalTable.Stacks[hitInfo.StackId].Count - hitInfo.CardIndex;
     fLocalTable.Stacks[hitInfo.StackId].GetLastCards(fDragInfo.Cards, fDragInfo.CardCount, True);
-    fLocalTable.Stacks[hitInfo.StackId].FaceUpCount := 0;
+    fLocalTable.Stacks[hitInfo.StackId].FaceUpCount := fLocalTable.Stacks[hitInfo.StackId].FaceUpCount - fDragInfo.CardCount;
 
     // send local table to display
     fDisplay.UpdateTable(fLocalTable);
@@ -468,39 +518,43 @@ begin
   if not fMouseIsDown then
     Exit;
 
-  var where := point(X, Y);
+  var mousePos := point(X, Y);
 
   if fDragInfo.Active then
   begin
     fDragInfo.Active := False;
 
-
-    // For now, always show flyback animation
-    var dropPos := PointF(where.X - fDragInfo.GrabOffset.X, where.Y - fDragInfo.GrabOffset.Y);
-    var homePos := PointF(fMouseDownPos.X - fDragInfo.GrabOffset.X, fMouseDownPos.Y - fDragInfo.GrabOffset.Y);
-    var anim := CreateFlybackAnimation(fDragInfo.Cards, dropPos, homePos,
-      TSizeF.Create(fLayout.CardWidth, fLayout.CardHeight));
-    fDisplay.Animation := anim;
-    anim.Start;
-
-  end
-  else if InDeadZone(fMouseDownPos, where) then
-  begin
-    // this is a click ... does it matter?
-    var hitInfo := THitTester.GetHitInfo(fLayout, fGame.Table, where);
+    var hitInfo := THitTester.GetHitInfo(fLayout, fGame.Table, mousePos);
     if hitInfo.Valid then
     begin
-      //
+      var m := NewMove(fDragInfo.SourceStack, hitInfo.StackId, fDragInfo.CardCount);
+      if TValidator.IsValidMove(m, fGame.Table) then
+      begin
+        DoExecuteMove(m, True);
+      end;
+    end
+    else
+    begin
+      // show flyback animation
+      var dropPos := PointF(mousePos.X - fDragInfo.GrabOffset.X, mousePos.Y - fDragInfo.GrabOffset.Y);
+      var homePos := PointF(fMouseDownPos.X - fDragInfo.GrabOffset.X, fMouseDownPos.Y - fDragInfo.GrabOffset.Y);
+      var anim := CreateFlybackAnimation(fDragInfo.Cards, dropPos, homePos,
+        TSizeF.Create(fLayout.CardWidth, fLayout.CardHeight));
+      fDisplay.Animation := anim;
+      anim.Start;
+    end;
+
+  end
+  else if InDeadZone(fMouseDownPos, mousePos) then
+  begin
+    // this is a click ... does it matter?
+    var hitInfo := THitTester.GetHitInfo(fLayout, fGame.Table, mousePos);
+    if hitInfo.Valid then
+    begin
       var autoMove := Default(TMove);
       if fGame.GetAutoMove(hitInfo.StackId, hitInfo.CardIndex, autoMove) then
       begin
-
-        // make this into ExecuteMove(aMove: TMove);
-        if fGame.TryExecuteMove(autoMove) then
-        begin
-          fDisplay.UpdateTable(fGame.Table);
-          UpdateControls;
-        end;
+        DoExecuteMove(autoMove);
       end;
     end;
 
