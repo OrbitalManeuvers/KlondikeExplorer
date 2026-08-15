@@ -16,6 +16,7 @@ type
     Active: Boolean;
     SourceStack: TStackId;
     CardIndex: Integer;
+    CardCount: Integer;
     Cards: TArray<TCard>;
     GrabOffset: TPointF;      // mouse-down position relative to card top-left
   end;
@@ -65,6 +66,7 @@ type
     procedure actHintExecute(Sender: TObject);
     procedure actRestartExecute(Sender: TObject);
     procedure actEndGameExecute(Sender: TObject);
+    procedure clDealsItemDblClick(Sender: TObject);
 
   private
     fDealGenerator: TDealGenerator;
@@ -81,7 +83,6 @@ type
     fMouseIsDown: Boolean;
     fMouseDownPos: TPoint;
     fDragInfo: TDragInfo;
-    fDropTargets: TMoveList;
 
 
 
@@ -91,7 +92,6 @@ type
     procedure LoadDeal(aDealIndex: Integer; aDeck: TCardStack); overload;
     procedure HandleTableChanged(Sender: TObject);
     procedure HandleAnimationComplete(Sender: TObject; const Animation: IAnimation);
-    procedure BuildDropTargets;
   public
     procedure InitContent; override;
     procedure DoneContent; override;
@@ -125,7 +125,8 @@ implementation
 uses Vcl.Themes, System.Math,
 
   u_Dealers, u_RenderUtils, u_HitTesters, u_MoveHelpers, u_Animations,
-  u_HintAnimations, u_DisplayConsts, u_FlybackAnimations;
+  u_HintAnimations, u_DisplayConsts, u_FlybackAnimations,
+  u_MoveGenerators, u_MoveValidators, u_Utils;
 
 function InDeadZone(MouseDown, MouseUp: TPoint): Boolean;
 const
@@ -149,7 +150,6 @@ begin
   fDisplay.OnAnimateComplete := HandleAnimationComplete;
   fCardResources := TCardResources.Create;
   TRenderUtils.SetResources(fCardResources);
-  fDropTargets := TMoveList.Create;
   fLocalTable := TTable.Create;
 
   fDragInfo := Default(TDragInfo);
@@ -172,7 +172,6 @@ begin
   fGame.Free;
   fDealGenerator.Free;
   fCardResources.Free;
-  fDropTargets.Free;
   fLocalTable.Free;
 
   inherited;
@@ -207,15 +206,8 @@ end;
 procedure TGameFrame.actUndoExecute(Sender: TObject);
 begin
   fGame.Undo;
-
+  fDisplay.UpdateTable(fGame.Table);
   UpdateControls;
-end;
-
-procedure TGameFrame.BuildDropTargets;
-begin
-  fDropTargets.Clear;
-
-
 end;
 
 procedure TGameFrame.actEndGameExecute(Sender: TObject);
@@ -244,6 +236,7 @@ end;
 procedure TGameFrame.actRedoExecute(Sender: TObject);
 begin
   fGame.Redo;
+  fDisplay.UpdateTable(fGame.Table);
   UpdateControls;
 end;
 
@@ -308,6 +301,12 @@ begin
   // send the selected deal to the display for preview
   if clDeals.ItemIndex >= 0 then
     PreviewDeal(clDeals.ItemIndex);
+end;
+
+procedure TGameFrame.clDealsItemDblClick(Sender: TObject);
+begin
+  if actStartGame.Enabled then
+    actStartGame.Execute;
 end;
 
 procedure TGameFrame.LoadDeal(aDealIndex: Integer; aDeck: TCardStack);
@@ -378,9 +377,11 @@ begin
   if not fMouseIsDown then
     Exit;
 
-  var where := point(X, Y);
-  if (not fDragInfo.Active) and InDeadZone(fMouseDownPos, where) then
+  var mousePos := point(X, Y);
+  if (not fDragInfo.Active) and InDeadZone(fMouseDownPos, mousePos) then
     Exit;
+
+  fDisplay.ClearDropTarget;
 
   if not fDragInfo.Active then
   begin
@@ -415,12 +416,9 @@ begin
     fDragInfo.GrabOffset := PointF(fMouseDownPos.X - cardOrigin.X,
       fMouseDownPos.Y - cardOrigin.Y);
 
-    // creating drop targets requires the DragInfo
-    BuildDropTargets;
-
     // build list of drag cards, remove from local table
-    var dragCount := fLocalTable.Stacks[hitInfo.StackId].Count - hitInfo.CardIndex;
-    fLocalTable.Stacks[hitInfo.StackId].GetLastCards(fDragInfo.Cards, dragCount, True);
+    fDragInfo.CardCount := fLocalTable.Stacks[hitInfo.StackId].Count - hitInfo.CardIndex;
+    fLocalTable.Stacks[hitInfo.StackId].GetLastCards(fDragInfo.Cards, fDragInfo.CardCount, True);
     fLocalTable.Stacks[hitInfo.StackId].FaceUpCount := 0;
 
     // send local table to display
@@ -432,11 +430,29 @@ begin
   if fDragInfo.Active then
   begin
     // update the display
-    var drawPos := PointF(where.X - fDragInfo.GrabOffset.X,
-      where.Y - fDragInfo.GrabOffset.Y);
+    var drawPos := PointF(mousePos.X - fDragInfo.GrabOffset.X, mousePos.Y - fDragInfo.GrabOffset.Y);
     fDisplay.SetDragOverlay(fDragInfo.Cards, fDragInfo.SourceStack, drawPos);
 
-    // if validDropTarget()
+    // check drop target
+    var hitInfo := THitTester.GetHitInfo(fLayout, fGame.Table, mousePos);
+    if hitInfo.Valid then
+    begin
+      var m := NewMove(fDragInfo.SourceStack, hitInfo.StackId, fDragInfo.CardCount);
+      if TValidator.IsValidMove(m, fGame.Table) then
+      begin
+        var dropPoint := fLayout.Origins[m.Target];
+        case StackIdToCategory(m.Target) of
+          scFoundation: ;
+          scTableau:
+            begin
+              var spacing := fLayout.StackOffset * fGame.Table.Stacks[m.Target].Count;
+              dropPoint.Offset(0, spacing);
+            end;
+        end;
+
+        fDisplay.SetDropTarget(fDragInfo.Cards, dropPoint);
+      end;
+    end
 
   end;
 
@@ -445,6 +461,9 @@ end;
 procedure TGameFrame.skTableMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
+  fDisplay.ClearDropTarget;
+  fDisplay.ClearDragOverlay;
+
   // if an invalid drag operation was attempted, we're done
   if not fMouseIsDown then
     Exit;
@@ -454,18 +473,15 @@ begin
   if fDragInfo.Active then
   begin
     fDragInfo.Active := False;
-    fDisplay.ClearDragOverlay;
+
 
     // For now, always show flyback animation
-    var dropPos := PointF(where.X - fDragInfo.GrabOffset.X,
-      where.Y - fDragInfo.GrabOffset.Y);
-    var homePos := PointF(fMouseDownPos.X - fDragInfo.GrabOffset.X,
-      fMouseDownPos.Y - fDragInfo.GrabOffset.Y);
+    var dropPos := PointF(where.X - fDragInfo.GrabOffset.X, where.Y - fDragInfo.GrabOffset.Y);
+    var homePos := PointF(fMouseDownPos.X - fDragInfo.GrabOffset.X, fMouseDownPos.Y - fDragInfo.GrabOffset.Y);
     var anim := CreateFlybackAnimation(fDragInfo.Cards, dropPos, homePos,
       TSizeF.Create(fLayout.CardWidth, fLayout.CardHeight));
     fDisplay.Animation := anim;
     anim.Start;
-
 
   end
   else if InDeadZone(fMouseDownPos, where) then
@@ -520,5 +536,6 @@ begin
   // switch to game controls
   pcControlPages.ActivePage := tsGame;
 end;
+
 
 end.

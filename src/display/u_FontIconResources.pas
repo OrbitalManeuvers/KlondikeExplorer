@@ -12,18 +12,20 @@ type
     fFont: ISkFont;
     fPaintRed: ISkPaint;
     fPaintBlack: ISkPaint;
+    fTablePaint: ISkPaint;
     fGlyphPaths: array[TCardSuit] of ISkPath;
     procedure BuildPaints;
     procedure BuildGlyphPaths;
-    function PaintForSuit(aSuit: TCardSuit): ISkPaint;
+    function PaintForSuit(aSuit: TCardSuit; aGhosted: Boolean): ISkPaint;
   public
     constructor Create;
-    procedure DrawIcon(aCanvas: ISkCanvas; aSuit: TCardSuit; aLocation: TRectF); override;
+    procedure DrawIcon(aCanvas: ISkCanvas; aSuit: TCardSuit; aLocation: TRectF;
+      aGhosted: Boolean = False); override;
   end;
 
 implementation
 
-uses System.UITypes,
+uses System.UITypes, Vcl.GraphUtil,
   u_DisplayConsts;
 
 const
@@ -60,6 +62,11 @@ begin
   fPaintBlack.Color := COLOR_BASIC_BLACK;
   fPaintBlack.Style := TSkPaintStyle.Fill;
   fPaintBlack.AntiAlias := True;
+
+  fTablePaint := TSkPaint.Create;
+  fTablePaint.Color := $10FFFFFF;
+  fTablePaint.Style := TSkPaintStyle.Fill;
+  fTablePaint.AntiAlias := True;
 end;
 
 procedure TFontIconResources.BuildGlyphPaths;
@@ -76,16 +83,18 @@ begin
   end;
 end;
 
-function TFontIconResources.PaintForSuit(aSuit: TCardSuit): ISkPaint;
+function TFontIconResources.PaintForSuit(aSuit: TCardSuit; aGhosted: Boolean): ISkPaint;
 begin
-  if aSuit in [csHearts, csDiamonds] then
+  if aGhosted then
+    Result := fTablePaint
+  else if aSuit in [csHearts, csDiamonds] then
     Result := fPaintRed
   else
     Result := fPaintBlack;
 end;
 
 procedure TFontIconResources.DrawIcon(aCanvas: ISkCanvas; aSuit: TCardSuit;
-  aLocation: TRectF);
+  aLocation: TRectF; aGhosted: Boolean);
 var
   Path: ISkPath;
   Bounds: TRectF;
@@ -110,7 +119,7 @@ begin
   aCanvas.Save;
   aCanvas.Translate(Dx, Dy);
   aCanvas.Scale(Scale, Scale);
-  aCanvas.DrawPath(Path, PaintForSuit(aSuit));
+  aCanvas.DrawPath(Path, PaintForSuit(aSuit, aGhosted));
   aCanvas.Restore;
 end;
 

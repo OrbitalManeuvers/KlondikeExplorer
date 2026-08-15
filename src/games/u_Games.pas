@@ -219,7 +219,7 @@ function TKlondikeGame.GetAutoMove(aSourceStack: TStackId; aCardIndex: Integer;
 begin
   Result := False;
 
-  var category := u_Utils.IdToCategory(aSourceStack);
+  var category := StackIdToCategory(aSourceStack);
   case category of
 
     // Stock - if cards: flip to waste, if empty: recycle waste to stock

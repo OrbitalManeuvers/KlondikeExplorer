@@ -21,6 +21,7 @@ type
       const aRect: TRectF; aFaceUp: Boolean);
     class procedure DrawCardBack(const aCanvas: ISkCanvas; const aRect: TRectF);
     class procedure DrawEmptySlot(const aCanvas: ISkCanvas; const aRect: TRectF);
+    class procedure DrawEmptySuitSlot(const aCanvas: ISkCanvas; const aRect: TRectF; aSuit: TCardSuit);
     class procedure DrawCardHighlight(const aCanvas: ISkCanvas; const aRect: TRectF;
       aColor: TAlphaColor; aOpacity: Single);
     class procedure DrawCardBundle(const aCanvas: ISkCanvas;
@@ -123,8 +124,8 @@ begin
   SuitX := aRect.Left + (CardW - SuitSize) / 2;
   SuitY := aRect.Top + (CardH - SuitSize) / 2 + CardH * 0.10;  // nudge slightly below center
 
-  res.SuitIcons.DrawIcon(aCanvas, aCard.Suit, RectF(
-    SuitX, SuitY, SuitX + SuitSize, SuitY + SuitSize));
+  res.SuitIcons.DrawIcon(aCanvas, aCard.Suit,
+    RectF(SuitX, SuitY, SuitX + SuitSize, SuitY + SuitSize));
 end;
 
 class procedure TRenderUtils.DrawCardBack(const aCanvas: ISkCanvas;
@@ -156,6 +157,16 @@ begin
   RR := TSkRoundRect.Create;
   RR.SetRect(InnerRect, CornerRadius * 0.7, CornerRadius * 0.7);
   aCanvas.DrawRoundRect(RR, res.PaintCardBack);
+end;
+
+class procedure TRenderUtils.DrawEmptySuitSlot(const aCanvas: ISkCanvas; const aRect: TRectF; aSuit: TCardSuit);
+begin
+  DrawEmptySlot(aCanvas, aRect);
+  var adjust: Single := aRect.Width * 0.50;
+  var r := aRect;
+  r.Inflate(adjust, -adjust);
+
+  res.SuitIcons.DrawIcon(aCanvas, aSuit, r, True);
 end;
 
 class procedure TRenderUtils.DrawEmptySlot(const aCanvas: ISkCanvas;

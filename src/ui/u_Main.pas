@@ -43,7 +43,7 @@ begin
   for var f := Low(TContentType) to High(TContentType) do
     ContentFrames[f] := nil;
 
-  MainPages.ActivePage := tsExplore;
+  MainPages.ActivePage := tsGame;
   MainPagesChange(nil);
 end;
 

@@ -25,7 +25,7 @@ inherited GameFrame: TGameFrame
       Top = 0
       Width = 329
       Height = 632
-      ActivePage = tsGame
+      ActivePage = tsSetup
       Align = alClient
       Style = tsFlatButtons
       TabOrder = 0
@@ -93,6 +93,7 @@ inherited GameFrame: TGameFrame
             TabOrder = 0
             OnBeforeDrawItem = clDealsBeforeDrawItem
             OnClick = clDealsClick
+            OnItemDblClick = clDealsItemDblClick
             object lblDealTitle: TLabel
               AlignWithMargins = True
               Left = 8

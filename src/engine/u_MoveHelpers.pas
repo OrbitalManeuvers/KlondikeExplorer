@@ -67,10 +67,10 @@ function TMoveHelper.GetMoveType: TMoveType; // caller should cache
 var
   targetCat: TStackCategory;
 begin
-  targetCat := IdToCategory(Self.Target);
+  targetCat := StackIdToCategory(Self.Target);
   Result := mtDraw;
 
-  case IdToCategory(Self.Source) of
+  case StackIdToCategory(Self.Source) of
     scStock:
       begin
         if Self.Target = siWaste then
@@ -121,7 +121,7 @@ begin
   end
   else
   begin
-    var sourceCat := IdToCategory(Source);
+    var sourceCat := StackIdToCategory(Source);
 
     case sourceCat of
       scWaste:
@@ -157,11 +157,11 @@ begin
   Self.Table := aTable;
   Self.MoveCount := aMove.Count;
   Self.Source.Id := aMove.Source;
-  Self.Source.Category := IdToCategory(Self.Source.Id);
+  Self.Source.Category := StackIdToCategory(Self.Source.Id);
   Self.Source.Stack := aTable.Stacks[aMove.Source];
 
   Self.Target.Id := aMove.Target;
-  Self.Target.Category := IdToCategory(Self.Target.Id);
+  Self.Target.Category := StackIdToCategory(Self.Target.Id);
   Self.Target.Stack := aTable.Stacks[Self.Target.Id];
   Self.MoveType := aMove.GetMoveType;
 

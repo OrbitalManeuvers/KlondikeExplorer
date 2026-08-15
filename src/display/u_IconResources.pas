@@ -8,7 +8,8 @@ uses System.Types, System.Skia,
 type
   TIconResources = class
   public
-    procedure DrawIcon(aCanvas: ISkCanvas; aSuit: TCardSuit; aLocation: TRectF); virtual; abstract;
+    procedure DrawIcon(aCanvas: ISkCanvas; aSuit: TCardSuit; aLocation: TRectF;
+      aGhosted: Boolean = False); virtual; abstract;
   end;
 
 implementation

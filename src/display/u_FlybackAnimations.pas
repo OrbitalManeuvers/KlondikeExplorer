@@ -14,7 +14,7 @@ uses System.Skia,
   u_RenderUtils;
 
 const
-  TOTAL_MS = 200;
+  TOTAL_MS = 150;
 
 type
   TFlybackAnimation = class(TAnimation)

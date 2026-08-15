@@ -5,7 +5,7 @@ interface
 uses System.UITypes;
 
 const
-  CARD_ASPECT_RATIO = 1.4;          // height = width * this
+  CARD_ASPECT_RATIO = 1.45;          // height = width * this
   OFFSET_FRACTION = 0.22;           // covered card shows this fraction of card height
   WASTE_OFFSET_FRACTION = 0.25;     // waste cards offset by this fraction of card width
   EDGE_MARGIN_FRACTION = 0.02;      // margin as fraction of control width

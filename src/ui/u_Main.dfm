@@ -3,7 +3,7 @@ object MainForm: TMainForm
   Top = 0
   Caption = 'Klondike Explorer'
   ClientHeight = 787
-  ClientWidth = 1165
+  ClientWidth = 939
   Color = clBlack
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -16,7 +16,7 @@ object MainForm: TMainForm
   object MainMenu: TActionMainMenuBar
     Left = 0
     Top = 0
-    Width = 1165
+    Width = 939
     Height = 25
     UseSystemFont = False
     ActionManager = MainActions
@@ -31,17 +31,19 @@ object MainForm: TMainForm
     Font.Name = 'Segoe UI'
     Font.Style = []
     Spacing = 0
+    ExplicitWidth = 1165
   end
   object MainPages: TPageControl
     Left = 0
     Top = 25
-    Width = 1165
+    Width = 939
     Height = 762
     ActivePage = tsGame
     Align = alClient
     Style = tsFlatButtons
     TabOrder = 1
     OnChange = MainPagesChange
+    ExplicitWidth = 1165
     object tsGame: TTabSheet
       Caption = 'Game Mode'
     end

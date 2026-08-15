@@ -6,11 +6,13 @@ uses u_Types;
 
 { type conversions/coercions }
 function SuitToStackId(aSuit: TCardSuit): TStackId;
-function IdToCategory(Id: TStackId): TStackCategory;
+function StackIdToSuit(Id: TStackId): TCardSuit;
+function StackIdToCategory(Id: TStackId): TStackCategory;
 function OppositeColor(aColor: TCardColor): TCardColor;
 
 { record initializers }
-function NewMove(aMove: TMove): TMove;
+function NewMove(aMove: TMove): TMove; overload;
+function NewMove(aSource, aTarget: TStackId; aCount: Integer): TMove; overload;
 function NewCard(aSuit: TCardSuit; aValue: TCardValue): TCard;
 function NewSeed(const Name: string; Value: Integer): TSeed;
 
@@ -19,12 +21,18 @@ implementation
 
 uses System.SysUtils;
 
+// not useful unless id is known to be a foundation id
+function StackIdToSuit(Id: TStackId): TCardSuit;
+begin
+  Result := TCardSuit( Ord(Id) - Ord(siFoundation1) );
+end;
+
 function SuitToStackId(aSuit: TCardSuit): TStackId;
 begin
   Result := TStackId( Ord(siFoundation1) + Ord(aSuit) );
 end;
 
-function IdToCategory(Id: TStackId): TStackCategory;
+function StackIdToCategory(Id: TStackId): TStackCategory;
 begin
   case Id of
     siWaste: Result := scWaste;
@@ -46,6 +54,13 @@ begin
   Result.Source := aMove.Source;
   Result.Target := aMove.Target;
   Result.Count := aMove.Count;
+end;
+
+function NewMove(aSource, aTarget: TStackId; aCount: Integer): TMove;
+begin
+  Result.Source := aSource;
+  Result.Target := aTarget;
+  Result.Count := aCount;
 end;
 
 function NewCard(aSuit: TCardSuit; aValue: TCardValue): TCard;

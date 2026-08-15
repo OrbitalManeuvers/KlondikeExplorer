@@ -14,9 +14,8 @@ function CreateHintAnimation(aTable: TTable; aMove: TMove; const aLayout: TLayou
 
 implementation
 
-uses System.Types, System.UITypes, System.Skia,
-  System.Math,
-  u_RenderUtils, u_MoveHelpers;
+uses System.Types, System.UITypes, System.Skia, System.Math,
+  u_DisplayConsts, u_RenderUtils, u_MoveHelpers;
 
 const
   FADE_IN_MS = 300;
@@ -62,7 +61,7 @@ begin
 
   anim.fBundle.CardSize.cx := aLayout.CardWidth;
   anim.fBundle.CardSize.cy := aLayout.CardHeight;
-  anim.fBundle.OutlineColor := TAlphaColors.Hotpink;
+  anim.fBundle.OutlineColor := COLOR_BASIC_RED;
   aTable.Stacks[aMove.Source].GetLastCards(anim.fBundle.Cards, aMove.Count);
 
   Result := anim;

@@ -18,6 +18,7 @@ type
   protected
     property PreviewMode: Boolean read fPreviewMode;
     property Table: TTable read fTable;
+    property Stopwatch: TStopwatch read fStopwatch;
   public
     constructor Create;
     destructor Destroy; override;
@@ -41,7 +42,7 @@ begin
   fTable := TTable.Create;
   fSnapshot := TSnapshot.Create;
   fStopwatch := TStopwatch.Startnew;
-  fStockPulse.Init(2000, 0.60, 0.90, fStopwatch);
+  fStockPulse.Init(1000, 0.40, 0.99, fStopwatch);
 end;
 
 destructor TTableDisplay.Destroy;
@@ -100,8 +101,11 @@ begin
       end
       else
       begin
-        TRenderUtils.DrawEmptySlot(aCanvas, r);
-      end;
+        if fPreviewMode then
+          TRenderUtils.DrawEmptySlot(aCanvas, r)
+        else
+          TRenderUtils.DrawEmptySuitSlot(aCanvas, r, StackIdToSuit(stackId));
+        end;
     end;
 
     // draw waste cards (up to 3 visible, fanned right)

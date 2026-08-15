@@ -95,14 +95,14 @@ end;
 class procedure TMoveExecutor.UpdateFaceUp(const source, target: TCardStack; aMove: TMove);
 begin
   // handle face up status for tableau stacks
-  if IdToCategory(aMove.Source) = scTableau then
+  if StackIdToCategory(aMove.Source) = scTableau then
   begin
     source.FaceUpCount := Max(0, source.FaceUpCount - aMove.Count);
     if (source.FaceUpCount = 0) and (source.Count > 0) then
       source.FaceUpCount := 1;
   end;
 
-  if IdToCategory(aMove.Target) = scTableau then
+  if StackIdToCategory(aMove.Target) = scTableau then
   begin
     target.FaceUpCount := target.FaceUpCount + aMove.Count;
   end;

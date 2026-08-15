@@ -19,7 +19,7 @@ implementation
 
 uses System.Math,
 
-  u_CardStacks, u_MoveHelpers;
+  u_CardStacks, u_MoveHelpers, u_Utils;
 
 const
   LEGAL_MOVE_TARGETS: array[TStackCategory] of TStackCategories = (
@@ -56,13 +56,6 @@ type
   end;
 
 
-// ------- Utils ------------------
-
-// not useful unless id is known to be a foundation id
-function IdToSuit(Id: TStackId): TCardSuit;
-begin
-  Result := TCardSuit( Ord(Id) - Ord(siFoundation1) );
-end;
 
 { TValidator }
 
@@ -172,7 +165,7 @@ begin
     Exit;
 
   // there's only one valid card per foundation pile
-  var validSuit := IdToSuit(i.Target.Id);
+  var validSuit := StackIdToSuit(i.Target.Id);
   var validValue := cvAce;
 
   if i.Target.Stack.HasCards then
