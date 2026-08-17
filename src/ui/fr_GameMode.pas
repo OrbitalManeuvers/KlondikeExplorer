@@ -84,6 +84,7 @@ type
     fDisplay: TGameDisplay;
     fLayout: TLayout;
     fCardResources: TCardResources;
+    fInitialState: TSnapshot;
 
     // transient
     fLocalTable: TTable;
@@ -147,6 +148,7 @@ begin
   fCardResources := TCardResources.Create;
   TRenderUtils.SetResources(fCardResources);
   fLocalTable := TTable.Create;
+  fInitialState := TSnapshot.Create;
 
   fDragInfo := Default(TDragInfo);
   fMouseIsDown := False;
@@ -169,6 +171,7 @@ begin
   fDealGenerator.Free;
   fCardResources.Free;
   fLocalTable.Free;
+  fInitialState.Free;
 
   inherited;
 end;
@@ -207,35 +210,27 @@ begin
   var stateIndex := StateList.ItemIndex;
   if stateIndex <> -1 then
   begin
-    var initialState := TSnapshot.Create;
-    try
 
-      if btnNewDeals.Down then
-      begin
-        // load selected deal into a table, then take a snapshot
-        LoadDeal(stateIndex, fLocalTable);
-        initialState.Capture(fLocalTable);
-        edtSnapshotName.Text := fDealGenerator.Deals[stateIndex].Title;
-      end
-      else if btnSnapshots.Down then
-      begin
-        // load a snapshot with the selected library entry
-        SnapshotLibrary.LoadSnapshot(stateIndex, initialState);
-        edtSnapshotName.Text := SnapshotLibrary.Names[stateIndex];
-      end;
-
-      fGame.Initialize(initialState);  // does a Restart
-      fDisplay.UpdateTable(fGame.Table);
-
-      // switch to game controls
-      pcControlPages.ActivePage := tsLiveMode;
-
-    finally
-      initialState.Free;
+    if btnNewDeals.Down then
+    begin
+      // load selected deal into a table, then take a snapshot
+      LoadDeal(stateIndex, fLocalTable);
+      fInitialState.Capture(fLocalTable);
+      edtSnapshotName.Text := fDealGenerator.Deals[stateIndex].Title;
+    end
+    else if btnSnapshots.Down then
+    begin
+      // load a snapshot with the selected library entry
+      SnapshotLibrary.LoadSnapshot(stateIndex, fInitialState);
+      edtSnapshotName.Text := SnapshotLibrary.Names[stateIndex];
     end;
 
-  end;
+    fGame.Initialize(fInitialState);  // does a Restart
+    fDisplay.UpdateTable(fGame.Table);
 
+    // switch to game controls
+    pcControlPages.ActivePage := tsLiveMode;
+  end;
 
   UpdateControls;
 end;
@@ -250,6 +245,20 @@ end;
 procedure TGameFrame.btnSaveSnapshotClick(Sender: TObject);
 begin
   //
+  if rbCurrentState.Checked then
+  begin
+    var s := TSnapshot.Create;
+    try
+      s.Capture(fGame.Table);
+      SnapshotLibrary.Add(edtSnapshotName.Text, s);
+    finally
+      s.Free;
+    end;
+  end
+  else if rbStarting.Checked then
+  begin
+    SnapshotLibrary.Add(edtSnapshotName.Text, fInitialState);
+  end;
 end;
 
 procedure TGameFrame.actEndLiveModeExecute(Sender: TObject);
