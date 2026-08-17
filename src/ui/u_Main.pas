@@ -8,7 +8,7 @@ uses
   Vcl.StdActns, Vcl.PlatformDefaultStyleActnCtrls, Vcl.ActnMan, Vcl.ToolWin,
   Vcl.ActnCtrls, Vcl.ActnMenus, Vcl.ComCtrls,
 
-  fr_ContentFrame;
+  fr_ContentFrame, u_SnapshotLibraries;
 
 type
   TContentType = (ctGameMode, ctExploreMode, ctTestMode);
@@ -26,6 +26,8 @@ type
     procedure FormDestroy(Sender: TObject);
   private
     ContentFrames: array[TContentType] of TContentFrame;
+    SnapshotLibrary: TSnapshotLibrary;
+    function SnapshotLibraryFileName(): string;
   public
   end;
 
@@ -36,10 +38,24 @@ implementation
 
 {$R *.dfm}
 
-uses fr_GameMode, fr_ExploreMode, u_SnapshotManagers;
+uses System.IOUtils,
+  fr_GameMode, fr_ExploreMode, fr_TestMode, u_SnapshotManagers;
+
+
+{ Utility }
+function RuntimeFilePath(const aFileName: string): string;
+begin
+  Result := TPath.Combine(ExtractFilePath(Application.ExeName), aFileName);
+end;
+
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
+  SnapshotLibrary := TSnapshotLibrary.Create;
+  var fileName := SnapshotLibraryFileName();
+  if TFile.Exists(fileName) then
+    SnapshotLibrary.LoadFromFile(fileName);
+
   for var f := Low(TContentType) to High(TContentType) do
     ContentFrames[f] := nil;
 
@@ -52,6 +68,11 @@ begin
   for var f := Low(TContentType) to High(TContentType) do
     if Assigned(ContentFrames[f]) then
       ContentFrames[f].DoneContent;
+  if SnapshotLibrary.Modified then
+  begin
+    var fileName := SnapshotLibraryFileName();
+    SnapshotLibrary.SaveToFile(fileName);
+  end;
 end;
 
 procedure TMainForm.MainPagesChange(Sender: TObject);
@@ -64,7 +85,7 @@ begin
     case contentType of
       ctGameMode: frameClass := TGameFrame;
       ctExploreMode: frameClass := TExploreFrame;
-      ctTestMode: ;
+      ctTestMode: frameClass := TTestFrame;
     end;
 
     if Assigned(frameClass) then
@@ -73,6 +94,7 @@ begin
       f.Color := clBlack;
       f.Align := alClient;
       f.Parent := MainPages.ActivePage;
+      f.SnapshotLibrary := SnapshotLibrary;
 
       f.InitContent;
       f.Visible := True;
@@ -83,6 +105,11 @@ begin
   for var frame := Low(TContentType) to High(TContentType) do
     if Assigned(ContentFrames[frame]) then
       ContentFrames[frame].IsActive := frame = contentType;
+end;
+
+function TMainForm.SnapshotLibraryFileName: string;
+begin
+  Result := RuntimeFilePath('snapshot_library.json');
 end;
 
 end.

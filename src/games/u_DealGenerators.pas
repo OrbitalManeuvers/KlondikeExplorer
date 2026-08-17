@@ -6,12 +6,12 @@ uses System.Generics.Collections,
   u_Types;
 
 type
-  TDifficulty = (ddUnsolved, ddEasy, ddMedium, ddDifficult);
+  TDifficulty = (ddUnknown, ddUnsolved, ddEasy, ddMedium, ddDifficult);
 
   TDeal = record
     Title: string;
     Difficulty: TDifficulty;
-    Cards: array[TCardOrdinal] of TCardOrdinal;
+    Cards: TArray<TCard>;
   end;
 
   TDealGenerator = class
@@ -38,13 +38,16 @@ type
 
 implementation
 
-uses u_Dealers, u_CardStacks, u_Shufflers;
+uses System.SysUtils,
+  u_Dealers, u_CardStacks, u_Shufflers, u_BasicSolvers, u_SolverTypes,
+  u_Snapshots;
 
 { TDifficultyHelper }
 
 function TDifficultyHelper.AsString: string;
 begin
   case Self of
+    ddUnknown: Result := '';
     ddUnsolved: Result := 'Unsolved';
     ddEasy: Result := 'Easy';
     ddMedium: Result := 'Medium';
@@ -87,13 +90,9 @@ begin
   TShuffler.Shuffle(cards);
 
   var deal := Default(TDeal);
-  deal.Title := 'Random';
+  deal.Title := 'Random-1';
   deal.Difficulty := ddUnsolved;
-
-  // needs to be formalized
-  for var i := 0 to cards.Count - 1 do
-    deal.Cards[i] := cards.Cards[i];
-
+  deal.Cards := cards._Cards.ToArray;
   fDeals.Add(deal);
 
   // ---
@@ -103,23 +102,87 @@ begin
   TShuffler.Shuffle(cards);
 
   deal := Default(TDeal);
-  deal.Title := 'Random2';
+  deal.Title := 'Random-2';
   deal.Difficulty := ddUnsolved;
-
-  for var i := 0 to cards.Count - 1 do
-    deal.Cards[i] := cards.Cards[i];
+  deal.Cards := cards._cards.ToArray;
 
   fDeals.Add(deal);
 end;
 
 procedure TDealGenerator.GenerateSolvableDeals;
 begin
-  //
+  Exit;
+
+  var limits := Default(TSolverLimits);
+  limits.MaxDepth := 1000;
+  limits.MaxNodes := 1000;
+
+  var solver := TBasicSolver.Create;
+  try
+    solver.Limits := limits;
+
+    var deck := TCardStack.Create;
+    try
+
+      var seedList := TList<Integer>.Create;
+      try
+        for var i := 1 to 1 do
+          seedList.Add(Round(Random()));
+
+        var snapshot := TSnapshot.Create;
+        try
+          // attempt each
+          for var attempt := 0 to seedList.Count - 1 do
+          begin
+            RandSeed := seedList[attempt];
+            TDealer.PopulateNewDeck(deck);
+            TShuffler.Shuffle(deck);
+
+            // save the deck as-is
+            var temp := TCardStack.Create;
+            try
+              temp.AddFrom(deck);
+
+              var result := solver.Solve(temp);
+              if result.Result = srSolved then
+              begin
+                var deal := Default(TDeal);
+                var seed: Integer := seedList[attempt];
+                deal.Title := 'BasicSolver-' + seed.ToString;
+                deal.Difficulty := ddEasy;
+                for var i := 0 to deck.Count - 1 do
+                  deal.Cards[i] := deck.Cards[i];
+
+                fDeals.Add(deal);
+              end;
+
+
+            finally
+              temp.Free;
+            end;
+
+          end;
+        finally
+          snapshot.Free;
+        end;
+
+      finally
+        seedList.Free;
+      end;
+
+    finally
+      deck.Free;
+    end;
+
+  finally
+    solver.Free;
+  end;
+
 end;
 
 function TDealGenerator.GetCount: Integer;
 begin
-  Result := FDeals.Count;
+  Result := fDeals.Count;
 end;
 
 function TDealGenerator.GetDeal(Index: Integer): TDeal;

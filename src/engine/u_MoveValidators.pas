@@ -11,7 +11,7 @@ uses
   u_TableUtils;
 
 type
-  TValidator = class
+  TMoveValidator = class
     class function IsValidMove(aMove: TMove; aTable: TTable): Boolean;
   end;
 
@@ -59,7 +59,7 @@ type
 
 { TValidator }
 
-class function TValidator.IsValidMove(aMove: TMove; aTable: TTable): Boolean;
+class function TMoveValidator.IsValidMove(aMove: TMove; aTable: TTable): Boolean;
 const
   target_rules: array[TStackCategory] of TRuleClass = (
     { scStock }      TStockRules,

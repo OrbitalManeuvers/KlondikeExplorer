@@ -24,20 +24,18 @@ type
   TGameFrame = class(TContentFrame)
     pnlGameControls: TPanel;
     pcControlPages: TPageControl;
-    tsSetup: TTabSheet;
-    tsGame: TTabSheet;
-    gbSeedControl: TGroupBox;
-    gbDeals: TGroupBox;
-    clDeals: TControlList;
+    tsSetupMode: TTabSheet;
+    tsLiveMode: TTabSheet;
+    StateList: TControlList;
     btnGenerateDeals: TSpeedButton;
-    btnStartGame: TSpeedButton;
+    btnStartLiveMode: TSpeedButton;
     lblDealTitle: TLabel;
     lblDealDescription: TLabel;
     skTable: TSkAnimatedPaintBox;
     btnUndo: TPngSpeedButton;
     GameActions: TActionList;
     actRegen: TAction;
-    actStartGame: TAction;
+    actStartLiveMode: TAction;
     actUndo: TAction;
     btnRedo: TPngSpeedButton;
     actRedo: TAction;
@@ -45,11 +43,20 @@ type
     btnHint: TPngSpeedButton;
     btnRestart: TPngSpeedButton;
     actRestart: TAction;
-    actEndGame: TAction;
+    actEndLiveMode: TAction;
     btnEndGame: TPngSpeedButton;
-    procedure clDealsBeforeDrawItem(AIndex: Integer; ACanvas: TCanvas;
+    GroupBox1: TGroupBox;
+    edtSnapshotName: TEdit;
+    Label1: TLabel;
+    btnSaveSnapshot: TPngSpeedButton;
+    Label2: TLabel;
+    btnNewDeals: TSpeedButton;
+    btnSnapshots: TSpeedButton;
+    rbStarting: TRadioButton;
+    rbCurrentState: TRadioButton;
+    procedure StateListBeforeDrawItem(AIndex: Integer; ACanvas: TCanvas;
       ARect: TRect; AState: TOwnerDrawState);
-    procedure clDealsClick(Sender: TObject);
+    procedure StateListClick(Sender: TObject);
     procedure skTableAnimationDraw(ASender: TObject; const ACanvas: ISkCanvas;
       const ADest: TRectF; const AProgress: Double; const AOpacity: Single);
     procedure skTableMouseDown(Sender: TObject; Button: TMouseButton;
@@ -60,17 +67,19 @@ type
       Shift: TShiftState; X, Y: Integer);
     procedure skTableResize(Sender: TObject);
     procedure actRegenExecute(Sender: TObject);
-    procedure actStartGameExecute(Sender: TObject);
+    procedure actStartLiveModeExecute(Sender: TObject);
     procedure actUndoExecute(Sender: TObject);
     procedure actRedoExecute(Sender: TObject);
     procedure actHintExecute(Sender: TObject);
     procedure actRestartExecute(Sender: TObject);
-    procedure actEndGameExecute(Sender: TObject);
-    procedure clDealsItemDblClick(Sender: TObject);
+    procedure actEndLiveModeExecute(Sender: TObject);
+    procedure StateListItemDblClick(Sender: TObject);
+    procedure StartStateChange(Sender: TObject);
+    procedure edtSnapshotNameChange(Sender: TObject);
+    procedure btnSaveSnapshotClick(Sender: TObject);
 
   private
     fDealGenerator: TDealGenerator;
-    fPreviewDealIndex: Integer;
     fGame: TKlondikeGame;
     fDisplay: TGameDisplay;
     fLayout: TLayout;
@@ -86,33 +95,17 @@ type
 
     procedure UpdateControls;
     procedure PreviewDeal(aIndex: Integer);
+    procedure PreviewSnapshot(aIndex: Integer);
     procedure LoadDeal(aDealIndex: Integer; aTable: TTable); overload;
     procedure LoadDeal(aDealIndex: Integer; aDeck: TCardStack); overload;
-    procedure HandleTableChanged(Sender: TObject);
     procedure HandleAnimationComplete(Sender: TObject; const Animation: IAnimation);
     procedure DoExecuteMove(aMove: TMove; aImmediate: Boolean = False);
+    function ValidSnapshotName(const aName: string): Boolean;
+    procedure UpdateStatePreview;
   public
     procedure InitContent; override;
     procedure DoneContent; override;
 
-
-    // Game actions
-//    procedure DoQuickMove(const aHit: THitInfo);
-//    procedure DoUndo;
-//    procedure DoRedo;
-//    procedure DoHint;
-//    procedure DoRestart;
-//    procedure DoAutoComplete;
-
-    // Drag management
-//    procedure BeginDrag(const aHit: THitInfo);
-//    procedure UpdateDrag(aPos: TPointF);
-//    procedure EndDrag(aPos: TPointF);
-//    procedure CancelDrag;
-
-    // State transitions
-    procedure StartGame(aDealIndex: Integer);
-//    procedure EndGame;
 
   end;
 
@@ -140,7 +133,10 @@ end;
 procedure TGameFrame.InitContent;
 begin
   inherited;
+
+  { !! }
   RandSeed := 12345;
+
 
   // lifetime assets
   fDealGenerator := TDealGenerator.Create;
@@ -158,12 +154,12 @@ begin
   // UI setup
   lblDealTitle.Font.Color := StyleServices.GetStyleFontColor(sfCaptionTextNormal);
   lblDealDescription.Font.Color := StyleServices.GetStyleFontColor(sfCaptionTextInactive);
-  pcControlPages.ActivePage := tsSetup;
+  pcControlPages.ActivePage := tsSetupMode;
   UpdateControls;
 
   skTable.BackgroundColor := COLOR_TABLE_BK;
 
-  PreviewDeal(-1);
+//  fDisplay.PreviewTable(nil);
 end;
 
 procedure TGameFrame.DoneContent;
@@ -177,29 +173,70 @@ begin
   inherited;
 end;
 
-procedure TGameFrame.UpdateControls;
+procedure TGameFrame.edtSnapshotNameChange(Sender: TObject);
 begin
-  var inSetup := pcControlPages.ActivePage = tsSetup;
-  var inGame := not inSetup;
-
-  // setup page
-  actStartGame.Enabled := inSetup and (clDeals.ItemIndex <> -1);
-  actRegen.Enabled := inSetup;
-
-  // game page
-  actUndo.Enabled := inGame and fGame.CanUndo;
-  actRedo.Enabled := inGame and fGame.CanRedo;
-  actHint.Enabled := inGame;
-  actRestart.Enabled := inGame;
-  actEndGame.Enabled := inGame;
-
+  // live checking of name uniqueness
+  UpdateControls;
 end;
 
-procedure TGameFrame.actStartGameExecute(Sender: TObject);
+function TGameFrame.ValidSnapshotName(const aName: string): Boolean;
 begin
-  var dealIndex := clDeals.ItemIndex;
-  Assert((dealIndex >= 0) and (dealIndex < fDealGenerator.Count));
-  StartGame(dealIndex);
+  Result := (aName.Length > 0) and (SnapshotLibrary.IndexOfName(aName) = -1);
+end;
+
+procedure TGameFrame.UpdateControls;
+begin
+  var liveMode := pcControlPages.ActivePage = tsLiveMode;
+
+  // setup page
+  actStartLiveMode.Enabled := StateList.ItemIndex <> -1;
+  actRegen.Enabled := btnNewDeals.Down;
+
+  // game page
+  actUndo.Enabled := liveMode and fGame.CanUndo;
+  actRedo.Enabled := liveMode and fGame.CanRedo;
+  actHint.Enabled := liveMode;
+  actRestart.Enabled := liveMode;
+  actEndLivemode.Enabled := liveMode;
+
+  btnSaveSnapshot.Enabled := ValidSnapshotName(edtSnapshotName.Text);
+end;
+
+procedure TGameFrame.actStartLiveModeExecute(Sender: TObject);
+begin
+  var stateIndex := StateList.ItemIndex;
+  if stateIndex <> -1 then
+  begin
+    var initialState := TSnapshot.Create;
+    try
+
+      if btnNewDeals.Down then
+      begin
+        // load selected deal into a table, then take a snapshot
+        LoadDeal(stateIndex, fLocalTable);
+        initialState.Capture(fLocalTable);
+        edtSnapshotName.Text := fDealGenerator.Deals[stateIndex].Title;
+      end
+      else if btnSnapshots.Down then
+      begin
+        // load a snapshot with the selected library entry
+        SnapshotLibrary.LoadSnapshot(stateIndex, initialState);
+        edtSnapshotName.Text := SnapshotLibrary.Names[stateIndex];
+      end;
+
+      fGame.Initialize(initialState);  // does a Restart
+      fDisplay.UpdateTable(fGame.Table);
+
+      // switch to game controls
+      pcControlPages.ActivePage := tsLiveMode;
+
+    finally
+      initialState.Free;
+    end;
+
+  end;
+
+
   UpdateControls;
 end;
 
@@ -210,14 +247,17 @@ begin
   UpdateControls;
 end;
 
-procedure TGameFrame.actEndGameExecute(Sender: TObject);
+procedure TGameFrame.btnSaveSnapshotClick(Sender: TObject);
 begin
-  pcControlPages.ActivePage := tsSetup;
-  fDealGenerator.Clear;
-  clDeals.ItemCount := 0;
+  //
+end;
 
+procedure TGameFrame.actEndLiveModeExecute(Sender: TObject);
+begin
+  pcControlPages.ActivePage := tsSetupMode;
   fDisplay.PreviewTable(nil);
 
+  StartStateChange(nil);
   UpdateControls;
 end;
 
@@ -230,7 +270,6 @@ begin
     fDisplay.Animation := anim;
     anim.Start;
   end;
-
 end;
 
 procedure TGameFrame.actRedoExecute(Sender: TObject);
@@ -242,13 +281,12 @@ end;
 
 procedure TGameFrame.actRegenExecute(Sender: TObject);
 begin
-  // populate list of deals
-  clDeals.ItemCount := 0;
-  PreviewDeal(-1);
+  fDisplay.PreviewTable(nil);
 
+  // populate list of deals
   fDealGenerator.GenerateDeals;
 
-  clDeals.ItemCount := fDealGenerator.Count;
+  StateList.ItemCount := fDealGenerator.Count;
   UpdateControls;
 end;
 
@@ -279,38 +317,69 @@ begin
   end;
 end;
 
-procedure TGameFrame.HandleTableChanged(Sender: TObject);
-begin
-// this needs re-thinking to consider animations
-
-//  if Assigned(fDisplay) and Assigned(fGame) then
-//    fDisplay.UpdateTable(fGame.Table);
-end;
-
-procedure TGameFrame.clDealsBeforeDrawItem(AIndex: Integer;
+procedure TGameFrame.StateListBeforeDrawItem(AIndex: Integer;
   ACanvas: TCanvas; ARect: TRect; AState: TOwnerDrawState);
 begin
-  if (AIndex >= 0) and (AIndex < fDealGenerator.Count) then
+  if btnNewDeals.Down then
   begin
-    lblDealTitle.Caption := fDealGenerator.Deals[AIndex].Title;
-    lblDealDescription.Caption := fDealGenerator.Deals[AIndex].Difficulty.AsString;
+    if (AIndex >= 0) and (AIndex < fDealGenerator.Count) then
+    begin
+      lblDealTitle.Caption := fDealGenerator.Deals[AIndex].Title;
+      lblDealDescription.Caption := fDealGenerator.Deals[AIndex].Difficulty.AsString;
+    end;
+  end
+  else
+  begin
+    if (AIndex >= 0) and (AIndex < SnapshotLibrary.Count) then
+    begin
+      lblDealTitle.Caption := SnapshotLibrary.Names[AIndex];
+      lblDealDescription.Caption := ddUnknown.AsString;
+    end;
   end;
 end;
 
-procedure TGameFrame.clDealsClick(Sender: TObject);
+procedure TGameFrame.StateListClick(Sender: TObject);
 begin
+  UpdateStatePreview;
   UpdateControls;
-  PreviewDeal(-1);
-
-  // send the selected deal to the display for preview
-  if clDeals.ItemIndex >= 0 then
-    PreviewDeal(clDeals.ItemIndex);
 end;
 
-procedure TGameFrame.clDealsItemDblClick(Sender: TObject);
+procedure TGameFrame.UpdateStatePreview;
 begin
-  if actStartGame.Enabled then
-    actStartGame.Execute;
+  fDisplay.PreviewTable(nil);
+  var index := StateList.ItemIndex;
+  if index <> -1 then
+  begin
+    if btnNewDeals.Down then
+    begin
+      PreviewDeal(index);
+    end
+    else if btnSnapshots.Down then
+    begin
+      PreviewSnapshot(index);
+    end;
+
+  end;
+
+end;
+
+procedure TGameFrame.StateListItemDblClick(Sender: TObject);
+begin
+  if actStartLiveMode.Enabled then
+    actStartLiveMode.Execute;
+end;
+
+procedure TGameFrame.StartStateChange(Sender: TObject);
+begin
+  StateList.ItemIndex := -1;
+  if btnNewDeals.Down then
+  begin
+    StateList.ItemCount := fDealGenerator.Count;
+  end
+  else
+  begin
+    StateList.ItemCount := SnapshotLibrary.Count;
+  end;
 end;
 
 procedure TGameFrame.LoadDeal(aDealIndex: Integer; aDeck: TCardStack);
@@ -332,26 +401,31 @@ begin
   end;
 end;
 
+procedure TGameFrame.PreviewSnapshot(aIndex: Integer);
+begin
+  var snapshot := TSnapshot.Create;
+  try
+    SnapshotLibrary.LoadSnapshot(aIndex, snapshot);
+    var temp := TTable.Create;
+    try
+      snapshot.Restore(temp);
+      fDisplay.PreviewTable(temp);
+    finally
+      temp.Free;
+    end;
+  finally
+    snapshot.Free;
+  end;
+end;
+
 procedure TGameFrame.PreviewDeal(aIndex: Integer);
 begin
-  if aIndex <> fPreviewDealIndex then
-  begin
-    fPreviewDealIndex := aIndex;
-
-    if fPreviewDealIndex >= 0 then
-    begin
-      var temp := TTable.Create;
-      try
-        LoadDeal(aIndex, temp);
-        fDisplay.PreviewTable(temp);
-      finally
-        temp.Free;
-      end;
-    end
-    else
-    begin
-      fDisplay.PreviewTable(nil);
-    end;
+  var temp := TTable.Create;
+  try
+    LoadDeal(aIndex, temp);
+    fDisplay.PreviewTable(temp);
+  finally
+    temp.Free;
   end;
 end;
 
@@ -412,13 +486,11 @@ end;
 procedure TGameFrame.skTableMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  if pcControlPages.ActivePage = tsGame then
+  if pcControlPages.ActivePage = tsLiveMode then
   begin
     fMouseDownPos := Point(X, Y);
     fMouseIsDown := True;
   end;
-
-
 end;
 
 procedure TGameFrame.skTableMouseMove(Sender: TObject; Shift: TShiftState; X,
@@ -488,7 +560,7 @@ begin
     if hitInfo.Valid then
     begin
       var m := NewMove(fDragInfo.SourceStack, hitInfo.StackId, fDragInfo.CardCount);
-      if TValidator.IsValidMove(m, fGame.Table) then
+      if TMoveValidator.IsValidMove(m, fGame.Table) then
       begin
         var dropPoint := fLayout.Origins[m.Target];
         case StackIdToCategory(m.Target) of
@@ -528,7 +600,7 @@ begin
     if hitInfo.Valid then
     begin
       var m := NewMove(fDragInfo.SourceStack, hitInfo.StackId, fDragInfo.CardCount);
-      if TValidator.IsValidMove(m, fGame.Table) then
+      if TMoveValidator.IsValidMove(m, fGame.Table) then
       begin
         DoExecuteMove(m, True);
       end;
@@ -566,29 +638,6 @@ end;
 procedure TGameFrame.skTableResize(Sender: TObject);
 begin
   fLayout.SetSize(skTable.ClientWidth, skTable.ClientHeight);
-end;
-
-procedure TGameFrame.StartGame(aDealIndex: Integer);
-begin
-  // initialize game
-  var deck := TCardStack.Create;
-  try
-    LoadDeal(aDealIndex, deck);
-
-    fGame.InitializeGame(deck);
-    fGame.Table.OnChange := Self.HandleTableChanged; // not sure if this will be used
-    fGame.Restart;
-    fGame.BuildHintList;
-
-  finally
-    deck.Free;
-  end;
-
-  // initialize display
-  fDisplay.UpdateTable(fGame.Table);
-
-  // switch to game controls
-  pcControlPages.ActivePage := tsGame;
 end;
 
 

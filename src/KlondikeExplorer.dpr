@@ -42,7 +42,21 @@ uses
   u_IconResources in 'display\u_IconResources.pas',
   u_FontIconResources in 'display\u_FontIconResources.pas',
   u_FlybackAnimations in 'display\u_FlybackAnimations.pas',
-  u_MoveAnimations in 'display\u_MoveAnimations.pas';
+  u_MoveAnimations in 'display\u_MoveAnimations.pas',
+  u_Heuristics in 'engine\u_Heuristics.pas',
+  u_Solvers in 'solvers\u_Solvers.pas',
+  u_ObserverTypes in 'solvers\u_ObserverTypes.pas',
+  u_Observers in 'solvers\u_Observers.pas',
+  u_SolverTypes in 'solvers\u_SolverTypes.pas',
+  u_BasicSolvers in 'solvers\u_BasicSolvers.pas',
+  fr_TestMode in 'ui\fr_TestMode.pas' {TestFrame: TFrame},
+  u_LogTypes in 'tests\u_LogTypes.pas',
+  u_Logs in 'tests\u_Logs.pas',
+  u_TestRunners in 'tests\u_TestRunners.pas',
+  u_TestUnits in 'tests\u_TestUnits.pas',
+  u_SnapshotTests in 'tests\u_SnapshotTests.pas',
+  u_SnapshotLibraries in 'ui\u_SnapshotLibraries.pas',
+  u_HintGenerators in 'games\u_HintGenerators.pas';
 
 {$R *.res}
 

@@ -12,31 +12,21 @@ type
     Move: TMove;
   end;
 
-  // base class just owns a table
-  TGame = class
-  protected
-    fTable: TTable;
-    fStartingDeck: TCardStack; // save for Reset
-  public
-    constructor Create; virtual;
-    destructor Destroy; override;
-    procedure InitializeGame(aDeck: TCardStack); virtual;
-    property Table: TTable read fTable;
-  end;
-
-  TKlondikeGame = class(TGame)
+  TKlondikeGame = class
   private
+    fTable: TTable;
     fSnapshotManager: TSnapshotManager;
     fSnapshot: TSnapshot;
+    fInitialState: TSnapshotToken;
     fUndoStack: TStack<TUndoEntry>;
     fRedoStack: TStack<TUndoEntry>;
     fHintMoves: TMoveList;
     fHintIndex: Integer;
     fMoveCount: Integer;
   public
-    constructor Create; override;
+    constructor Create;
     destructor Destroy; override;
-    procedure InitializeGame(aDeck: TCardStack); override;
+    procedure Initialize(aInitialState: TSnapshot);
 
     // Move execution with history
     function TryExecuteMove(const aMove: TMove): Boolean;
@@ -60,6 +50,7 @@ type
     procedure Restart;
     procedure CopyTableTo(aTarget: TTable);
 
+    property Table: TTable read fTable;
     property MoveCount: Integer read fMoveCount;
 
   end;
@@ -70,7 +61,7 @@ implementation
 
 uses System.Math,
   u_CardHelpers, u_Utils, u_Dealers, u_MoveValidators, u_MoveExecutors,
-  u_TableUtils, u_MoveGenerators;
+  u_TableUtils, u_MoveGenerators, u_HintGenerators;
 
 function NewUndoEntry(const aToken: TSnapshotToken; const aMove: TMove): TUndoEntry;
 begin
@@ -78,35 +69,14 @@ begin
   Result.Move := aMove;
 end;
 
-{ TGame }
-
-constructor TGame.Create;
-begin
-  inherited Create;
-  fTable := TTable.Create;
-  fStartingDeck := TCardStack.Create;
-end;
-
-destructor TGame.Destroy;
-begin
-  fStartingDeck.Free;
-  fTable.Free;
-  inherited;
-end;
-
-procedure TGame.InitializeGame(aDeck: TCardStack);
-begin
-  fStartingDeck.Clear;
-  fStartingDeck.AddFrom(aDeck);
-end;
-
-
 { TKlondikeGame }
 constructor TKlondikeGame.Create;
 begin
   inherited;
+  fTable := TTable.Create;
   fSnapshotManager := TSnapshotManager.Create;
   fSnapshot := TSnapshot.Create;
+  fInitialState := NO_SNAPSHOT;
 
   fUndoStack := TStack<TUndoEntry>.Create;
   fRedoStack := TStack<TUndoEntry>.Create;
@@ -121,18 +91,32 @@ begin
   fRedoStack.Free;
 
   fSnapshot.Free;
+
+  if fInitialState <> NO_SNAPSHOT then
+    fSnapshotManager.Delete(fInitialState);
   fSnapshotManager.Free;
 
+  fTable.Free;
   inherited;
+end;
+
+procedure TKlondikeGame.Initialize(aInitialState: TSnapshot);
+begin
+  if fInitialState <> NO_SNAPSHOT then
+    fSnapshotManager.Delete(fInitialState);
+  fInitialState := fSnapshotManager.Save(aInitialState);
+
+  Restart;
+  BuildHintList;
 end;
 
 function TKlondikeGame.TryExecuteMove(const aMove: TMove): Boolean;
 begin
   Result := False;
-  if TValidator.IsValidMove(aMove, fTable) then
+  if TMoveValidator.IsValidMove(aMove, fTable) then
   begin
     // capture undo state
-    fSnapshot.Capture(Table);
+    fSnapshot.Capture(fTable);
     var token := fSnapshotManager.Save(fSnapshot);
     fUndoStack.Push(NewUndoEntry(token, aMove));
 
@@ -140,7 +124,7 @@ begin
     fRedoStack.Clear;
 
     // apply move
-    TMoveExecutor.ExecuteMove(Table, aMove);
+    TMoveExecutor.ExecuteMove(fTable, aMove);
     Inc(fMoveCount);
     Result := True;
 
@@ -155,7 +139,10 @@ begin
 
   var scratch := TMoveList.Create();
   try
-    TMoveGenerator.GenerateMoves(Table, scratch);
+
+    // todo: implement THintGenerator.GenerateHints(Table, moveList);
+
+    TMoveGenerator.GenerateMoves(fTable, scratch);
 
     // !! MS Solitaire has opinions here. tableau twins don't show as a move until
     // the covered twin can be moved to foundation.
@@ -164,7 +151,7 @@ begin
     // this used to get filtered out as cyclic. This needs design.
 
     for var m in scratch do
-      if TValidator.IsValidMove(m, Table) then
+      if TMoveValidator.IsValidMove(m, fTable) then
       begin
         if m.Source <> siStock then
           fHintMoves.Add(m);
@@ -225,20 +212,20 @@ begin
     // Stock - if cards: flip to waste, if empty: recycle waste to stock
     scStock:
       begin
-        if Table.Stock.HasCards then
+        if fTable.Stock.HasCards then
         begin
           // do mtDraw
           aMove.Source := siStock;
           aMove.Target := siWaste;
-          aMove.Count := Min(3, Table.Stock.Count);
+          aMove.Count := Min(3, fTable.Stock.Count);
           Exit(True);
         end
-        else if Table.Waste.HasCards then
+        else if fTable.Waste.HasCards then
         begin
           // do mtRecycle
           aMove.Source := siWaste;
           aMove.Target := siStock;
-          aMove.Count := Table.Waste.Count;
+          aMove.Count := fTable.Waste.Count;
           Exit(True);
         end;
       end;
@@ -246,12 +233,12 @@ begin
     // Waste - only moves topmost card. try foundation first, tableaus next
     scWaste:
       begin
-        if Table.Waste.HasCards then
+        if fTable.Waste.HasCards then
         begin
-          var c := Table.Waste.Last;
+          var c := fTable.Waste.Last;
 
           // immediate move to foundation?
-          if IsNextFoundationCard(c, Table) then
+          if IsNextFoundationCard(c, fTable) then
           begin
             aMove.Source := siWaste;
             aMove.Target := SuitToStackId(c.Suit);
@@ -261,7 +248,7 @@ begin
 
           // check tableau stacks.
           var targetId: TStackId;
-          if FindTableauTarget(c, Table, targetId) then
+          if FindTableauTarget(c, fTable, targetId) then
           begin
             aMove.Source := siWaste;
             aMove.Target := targetId;
@@ -276,12 +263,12 @@ begin
     // - buried face up: can only move full run to other tableau
     scTableau:
       begin
-        var c := Table.Stacks[aSourceStack].Cards[aCardIndex];
+        var c := fTable.Stacks[aSourceStack].Cards[aCardIndex];
 
         // if this is the topmost card ...
-        if aCardIndex = Table.Stacks[aSourceStack].Count - 1 then
+        if aCardIndex = fTable.Stacks[aSourceStack].Count - 1 then
         begin
-          if IsNextFoundationCard(c, Table) then
+          if IsNextFoundationCard(c, fTable) then
           begin
             aMove.Source := aSourceStack;
             aMove.Target := SuitToStackId(c.Suit);
@@ -292,11 +279,11 @@ begin
 
         // otherwise, regardless of its position it has to move to a valid spot
         var target: TStackId;
-        if FindTableauTarget(c, Table, target) then
+        if FindTableauTarget(c, fTable, target) then
         begin
           aMove.Source := aSourceStack;
           aMove.Target := target;
-          aMove.Count := Table.Stacks[aSourceStack].Count - aCardIndex; // !! verify
+          aMove.Count := fTable.Stacks[aSourceStack].Count - aCardIndex; // !! verify
           Exit(True);
         end;
       end;
@@ -304,11 +291,11 @@ begin
     // Foundation - only moves single card, only to tableau.
     scFoundation:
       begin
-        if Table.Stacks[aSourceStack].HasCards then
+        if fTable.Stacks[aSourceStack].HasCards then
         begin
-          var c := Table.Stacks[aSourceStack].Last;
+          var c := fTable.Stacks[aSourceStack].Last;
           var target: TStackId;
-          if FindTableauTarget(c, Table, target) then
+          if FindTableauTarget(c, fTable, target) then
           begin
             aMove.Source := aSourceStack;
             aMove.Target := target;
@@ -322,16 +309,10 @@ begin
 
 end;
 
-procedure TKlondikeGame.InitializeGame(aDeck: TCardStack);
-begin
-  inherited;
-//  Restart;
-end;
-
 function TKlondikeGame.IsWon: Boolean;
 begin
   for var suit := Low(TCardSuit) to High(TCardSuit) do
-    if (not Table.Foundation[suit].HasCards) or (Table.Foundation[suit].Last.Value <> cvKing) then
+    if (not fTable.Foundation[suit].HasCards) or (fTable.Foundation[suit].Last.Value <> cvKing) then
       Exit(False);
 
   Result := True;
@@ -342,7 +323,7 @@ begin
   if CanRedo then
   begin
     // capture current state for undo
-    fSnapshot.Capture(Table);
+    fSnapshot.Capture(fTable);
     var undoToken := fSnapshotManager.Save(fSnapshot);
 
     var entry := fRedoStack.Pop;
@@ -350,7 +331,7 @@ begin
 
     // restore forward state
     fSnapshotManager.Load(entry.Token, fSnapshot);
-    fSnapshot.Restore(Table);
+    fSnapshot.Restore(fTable);
 
     Inc(fMoveCount);
   end;
@@ -361,7 +342,7 @@ begin
   if CanUndo then
   begin
     // capture current state for redo
-    fSnapshot.Capture(Table);
+    fSnapshot.Capture(fTable);
     var redoToken := fSnapshotManager.Save(fSnapshot);
 
     var entry := fUndoStack.Pop;
@@ -369,7 +350,7 @@ begin
 
     // restore previous state
     fSnapshotManager.Load(entry.Token, fSnapshot);
-    fSnapshot.Restore(Table);
+    fSnapshot.Restore(fTable);
 
     Dec(fMoveCount);
   end;
@@ -383,27 +364,28 @@ end;
 
 procedure TKlondikeGame.Restart;
 begin
+  Assert(fInitialState <> NO_SNAPSHOT);
+
   ResetHints;
 
-  fSnapshotManager.Clear;
+  for var ue in fUndoStack do
+    fSnapshotManager.Delete(ue.Token);
   fUndoStack.Clear;
+
+  for var re in fRedoStack do
+    fSnapshotManager.Delete(re.Token);
   fRedoStack.Clear;
+
   fMoveCount := 0;
 
-  Table.BeginUpdate;
+  fTable.BeginUpdate;
   try
+    fTable.Clear;
 
-    // TDealer.Deal is destructive to the source deck, so save off the original
-    var temp := TCardStack.Create;
-    try
-      temp.AddFrom(fStartingDeck);
-      TDealer.Deal(temp, Table);
-    finally
-      temp.free;
-    end;
-
+    fSnapshotManager.Load(fInitialState, fSnapshot);
+    fSnapshot.Restore(fTable);
   finally
-    Table.EndUpdate;
+    fTable.EndUpdate;
   end;
 end;
 

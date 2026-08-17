@@ -12,7 +12,7 @@ inherited GameFrame: TGameFrame
   object pnlGameControls: TPanel
     Left = 0
     Top = 0
-    Width = 337
+    Width = 313
     Height = 632
     Align = alLeft
     BevelOuter = bvNone
@@ -23,165 +23,214 @@ inherited GameFrame: TGameFrame
     object pcControlPages: TPageControl
       Left = 4
       Top = 0
-      Width = 329
+      Width = 305
       Height = 632
-      ActivePage = tsSetup
+      ActivePage = tsLiveMode
       Align = alClient
       Style = tsFlatButtons
       TabOrder = 0
-      object tsSetup: TTabSheet
+      ExplicitWidth = 329
+      object tsSetupMode: TTabSheet
         Caption = 'Setup'
         TabVisible = False
-        object gbSeedControl: TGroupBox
-          AlignWithMargins = True
-          Left = 4
-          Top = 4
-          Width = 313
-          Height = 81
-          Margins.Left = 4
-          Margins.Top = 4
-          Margins.Right = 4
-          Margins.Bottom = 4
-          Align = alTop
-          Caption = ' Seeds '
-          TabOrder = 0
+        DesignSize = (
+          297
+          622)
+        object Label2: TLabel
+          Left = 3
+          Top = 9
+          Width = 117
+          Height = 17
+          Caption = 'Select starting state:'
         end
-        object gbDeals: TGroupBox
-          AlignWithMargins = True
-          Left = 4
-          Top = 97
-          Width = 313
-          Height = 521
-          Margins.Left = 4
-          Margins.Top = 8
-          Margins.Right = 4
-          Margins.Bottom = 4
-          Align = alClient
-          Caption = ' Deals '
-          TabOrder = 1
-          DesignSize = (
-            313
-            521)
-          object btnGenerateDeals: TSpeedButton
+        object btnGenerateDeals: TSpeedButton
+          Left = 3
+          Top = 579
+          Width = 86
+          Height = 33
+          Action = actRegen
+          Anchors = [akLeft, akBottom]
+        end
+        object btnStartLiveMode: TSpeedButton
+          Left = 136
+          Top = 579
+          Width = 150
+          Height = 33
+          Action = actStartLiveMode
+          Anchors = [akLeft, akBottom]
+        end
+        object btnNewDeals: TSpeedButton
+          Left = 3
+          Top = 39
+          Width = 140
+          Height = 33
+          GroupIndex = 1
+          Down = True
+          Caption = 'New Deals'
+          OnClick = StartStateChange
+        end
+        object btnSnapshots: TSpeedButton
+          Left = 151
+          Top = 39
+          Width = 140
+          Height = 33
+          GroupIndex = 1
+          Caption = 'Snapshots'
+          OnClick = StartStateChange
+        end
+        object StateList: TControlList
+          Left = 3
+          Top = 79
+          Width = 288
+          Height = 486
+          Anchors = [akLeft, akTop, akRight, akBottom]
+          ItemHeight = 58
+          ItemMargins.Left = 0
+          ItemMargins.Top = 0
+          ItemMargins.Right = 0
+          ItemMargins.Bottom = 0
+          ParentColor = False
+          TabOrder = 0
+          OnBeforeDrawItem = StateListBeforeDrawItem
+          OnClick = StateListClick
+          OnItemDblClick = StateListItemDblClick
+          object lblDealTitle: TLabel
+            AlignWithMargins = True
             Left = 8
-            Top = 24
-            Width = 105
-            Height = 33
-            Action = actRegen
+            Top = 3
+            Width = 268
+            Height = 25
+            Margins.Left = 8
+            Margins.Right = 8
+            Margins.Bottom = 0
+            Align = alTop
+            Caption = 'Title'
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clWhite
+            Font.Height = -19
+            Font.Name = 'Segoe UI Semibold'
+            Font.Style = []
+            ParentFont = False
+            StyleElements = [seClient, seBorder]
+            ExplicitWidth = 37
           end
-          object btnStartGame: TSpeedButton
+          object lblDealDescription: TLabel
+            AlignWithMargins = True
             Left = 8
-            Top = 478
-            Width = 113
-            Height = 33
-            Action = actStartGame
-            Anchors = [akLeft, akBottom]
-            ExplicitTop = 456
-          end
-          object clDeals: TControlList
-            Left = 8
-            Top = 63
-            Width = 298
-            Height = 404
-            Anchors = [akLeft, akTop, akRight, akBottom]
-            ItemHeight = 58
-            ItemMargins.Left = 0
-            ItemMargins.Top = 0
-            ItemMargins.Right = 0
-            ItemMargins.Bottom = 0
-            ParentColor = False
-            TabOrder = 0
-            OnBeforeDrawItem = clDealsBeforeDrawItem
-            OnClick = clDealsClick
-            OnItemDblClick = clDealsItemDblClick
-            object lblDealTitle: TLabel
-              AlignWithMargins = True
-              Left = 8
-              Top = 3
-              Width = -16
-              Height = 25
-              Margins.Left = 8
-              Margins.Right = 8
-              Margins.Bottom = 0
-              Align = alTop
-              Caption = 'Title'
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clWhite
-              Font.Height = -19
-              Font.Name = 'Segoe UI Semibold'
-              Font.Style = []
-              ParentFont = False
-              StyleElements = [seClient, seBorder]
-              ExplicitWidth = 37
-            end
-            object lblDealDescription: TLabel
-              AlignWithMargins = True
-              Left = 8
-              Top = 28
-              Width = -11
-              Height = 17
-              Margins.Left = 8
-              Margins.Top = 0
-              Align = alTop
-              Caption = 'Description'
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clWhite
-              Font.Height = -13
-              Font.Name = 'Segoe UI'
-              Font.Style = []
-              ParentFont = False
-              StyleElements = [seClient, seBorder]
-              ExplicitWidth = 66
-            end
+            Top = 28
+            Width = 273
+            Height = 17
+            Margins.Left = 8
+            Margins.Top = 0
+            Align = alTop
+            Caption = 'Description'
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clWhite
+            Font.Height = -13
+            Font.Name = 'Segoe UI'
+            Font.Style = []
+            ParentFont = False
+            StyleElements = [seClient, seBorder]
+            ExplicitWidth = 66
           end
         end
       end
-      object tsGame: TTabSheet
-        Caption = 'Game'
+      object tsLiveMode: TTabSheet
+        Caption = 'LiveMode'
         ImageIndex = 1
         TabVisible = False
         object btnUndo: TPngSpeedButton
-          Left = 16
+          Left = 17
           Top = 40
-          Width = 65
+          Width = 80
           Height = 33
           Action = actUndo
         end
         object btnRedo: TPngSpeedButton
-          Left = 88
+          Left = 104
           Top = 40
-          Width = 65
+          Width = 80
           Height = 33
           Action = actRedo
         end
         object btnHint: TPngSpeedButton
-          Left = 159
+          Left = 191
           Top = 40
-          Width = 65
+          Width = 80
           Height = 33
           Action = actHint
         end
         object btnRestart: TPngSpeedButton
-          Left = 231
-          Top = 40
-          Width = 65
+          Left = 17
+          Top = 96
+          Width = 80
           Height = 33
           Action = actRestart
         end
         object btnEndGame: TPngSpeedButton
-          Left = 87
-          Top = 575
-          Width = 137
+          Left = 113
+          Top = 96
+          Width = 80
           Height = 33
-          Action = actEndGame
+          Action = actEndLiveMode
+        end
+        object GroupBox1: TGroupBox
+          Left = 3
+          Top = 152
+          Width = 290
+          Height = 145
+          Caption = ' Save Snapshot'
+          TabOrder = 0
+          object Label1: TLabel
+            Left = 16
+            Top = 35
+            Width = 38
+            Height = 17
+            Caption = 'Name:'
+          end
+          object btnSaveSnapshot: TPngSpeedButton
+            Left = 16
+            Top = 95
+            Width = 80
+            Height = 33
+            Action = actRestart
+            Caption = 'Save'
+            OnClick = btnSaveSnapshotClick
+          end
+          object edtSnapshotName: TEdit
+            Left = 72
+            Top = 32
+            Width = 200
+            Height = 25
+            TabOrder = 0
+            OnChange = edtSnapshotNameChange
+          end
+          object rbStarting: TRadioButton
+            Left = 16
+            Top = 64
+            Width = 113
+            Height = 17
+            Caption = 'Starting state'
+            TabOrder = 1
+          end
+          object rbCurrentState: TRadioButton
+            Left = 160
+            Top = 64
+            Width = 113
+            Height = 17
+            Caption = 'Current state'
+            Checked = True
+            TabOrder = 2
+            TabStop = True
+          end
         end
       end
     end
   end
   object skTable: TSkAnimatedPaintBox
-    Left = 337
+    Left = 313
     Top = 0
-    Width = 713
+    Width = 737
     Height = 632
     Align = alClient
     OnMouseDown = skTableMouseDown
@@ -190,6 +239,8 @@ inherited GameFrame: TGameFrame
     OnResize = skTableResize
     BackgroundColor = claSeagreen
     OnAnimationDraw = skTableAnimationDraw
+    ExplicitLeft = 337
+    ExplicitWidth = 713
   end
   object GameActions: TActionList
     Left = 512
@@ -198,9 +249,9 @@ inherited GameFrame: TGameFrame
       Caption = 'Regenerate'
       OnExecute = actRegenExecute
     end
-    object actStartGame: TAction
+    object actStartLiveMode: TAction
       Caption = 'Start Selected'
-      OnExecute = actStartGameExecute
+      OnExecute = actStartLiveModeExecute
     end
     object actUndo: TAction
       Caption = 'Undo'
@@ -218,9 +269,9 @@ inherited GameFrame: TGameFrame
       Caption = 'Restart'
       OnExecute = actRestartExecute
     end
-    object actEndGame: TAction
+    object actEndLiveMode: TAction
       Caption = 'End Game'
-      OnExecute = actEndGameExecute
+      OnExecute = actEndLiveModeExecute
     end
   end
 end

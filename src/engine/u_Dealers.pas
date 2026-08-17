@@ -10,14 +10,14 @@ uses System.Classes,
 type
   TDealer = class
     class procedure Deal(aSource: TCardStack; aTable: TTable);
+    class procedure Repack(aTable: TTable; aTarget: TCardStack);
     class procedure PopulateNewDeck(aDeck: TCardStack);
   end;
 
 implementation
 
 uses System.SysUtils,
-
-  u_Types {, u_MoveExecutors};
+  u_Types;
 
 
 { TDealer }
@@ -61,6 +61,14 @@ begin
   aDeck.Clear;
   for var c := Low(TCardOrdinal) to High(TCardOrdinal) do
     aDeck.Add(c);
+end;
+
+class procedure TDealer.Repack(aTable: TTable; aTarget: TCardStack);
+begin
+  aTarget.Clear;
+  for var id := Low(TStackId) to High(TStackId) do
+    aTarget._AddFrom(aTable.Stacks[id]);
+  aTable.Clear;
 end;
 
 end.

@@ -31,7 +31,6 @@ object MainForm: TMainForm
     Font.Name = 'Segoe UI'
     Font.Style = []
     Spacing = 0
-    ExplicitWidth = 1165
   end
   object MainPages: TPageControl
     Left = 0
@@ -43,7 +42,6 @@ object MainForm: TMainForm
     Style = tsFlatButtons
     TabOrder = 1
     OnChange = MainPagesChange
-    ExplicitWidth = 1165
     object tsGame: TTabSheet
       Caption = 'Game Mode'
     end
