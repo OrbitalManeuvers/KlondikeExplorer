@@ -54,6 +54,8 @@ type
     btnSnapshots: TSpeedButton;
     rbStarting: TRadioButton;
     rbCurrentState: TRadioButton;
+    btnAutoComplete: TPngSpeedButton;
+    actAutoComplete: TAction;
     procedure StateListBeforeDrawItem(AIndex: Integer; ACanvas: TCanvas;
       ARect: TRect; AState: TOwnerDrawState);
     procedure StateListClick(Sender: TObject);
@@ -77,6 +79,7 @@ type
     procedure StartStateChange(Sender: TObject);
     procedure edtSnapshotNameChange(Sender: TObject);
     procedure btnSaveSnapshotClick(Sender: TObject);
+    procedure actAutoCompleteExecute(Sender: TObject);
 
   private
     fDealGenerator: TDealGenerator;
@@ -201,6 +204,7 @@ begin
   actHint.Enabled := liveMode;
   actRestart.Enabled := liveMode;
   actEndLivemode.Enabled := liveMode;
+  actAutoComplete.Enabled := fGame.CanAutoComplete;
 
   btnSaveSnapshot.Enabled := ValidSnapshotName(edtSnapshotName.Text);
 end;
@@ -259,6 +263,12 @@ begin
   begin
     SnapshotLibrary.Add(edtSnapshotName.Text, fInitialState);
   end;
+end;
+
+procedure TGameFrame.actAutoCompleteExecute(Sender: TObject);
+begin
+//
+
 end;
 
 procedure TGameFrame.actEndLiveModeExecute(Sender: TObject);

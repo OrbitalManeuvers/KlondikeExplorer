@@ -182,7 +182,7 @@ end;
 
 function TKlondikeGame.CanAutoComplete: Boolean;
 begin
-  Result := False;
+  Result := (fTable.Stock.Count = 0) and (fTable.Waste.Count = 0);
 end;
 
 function TKlondikeGame.CanRedo: Boolean;

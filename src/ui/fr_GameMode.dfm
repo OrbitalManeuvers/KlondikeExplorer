@@ -25,11 +25,10 @@ inherited GameFrame: TGameFrame
       Top = 0
       Width = 305
       Height = 632
-      ActivePage = tsSetupMode
+      ActivePage = tsLiveMode
       Align = alClient
       Style = tsFlatButtons
       TabOrder = 0
-      ExplicitWidth = 329
       object tsSetupMode: TTabSheet
         Caption = 'Setup'
         TabVisible = False
@@ -168,11 +167,18 @@ inherited GameFrame: TGameFrame
           Action = actRestart
         end
         object btnEndGame: TPngSpeedButton
-          Left = 113
+          Left = 104
           Top = 96
           Width = 80
           Height = 33
           Action = actEndLiveMode
+        end
+        object btnAutoComplete: TPngSpeedButton
+          Left = 191
+          Top = 96
+          Width = 80
+          Height = 33
+          Action = actAutoComplete
         end
         object GroupBox1: TGroupBox
           Left = 3
@@ -239,8 +245,6 @@ inherited GameFrame: TGameFrame
     OnResize = skTableResize
     BackgroundColor = claSeagreen
     OnAnimationDraw = skTableAnimationDraw
-    ExplicitLeft = 337
-    ExplicitWidth = 713
   end
   object GameActions: TActionList
     Left = 512
@@ -272,6 +276,10 @@ inherited GameFrame: TGameFrame
     object actEndLiveMode: TAction
       Caption = 'End Game'
       OnExecute = actEndLiveModeExecute
+    end
+    object actAutoComplete: TAction
+      Caption = 'Complete'
+      OnExecute = actAutoCompleteExecute
     end
   end
 end

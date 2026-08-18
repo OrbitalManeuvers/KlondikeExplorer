@@ -20,12 +20,12 @@ type
     function GetCount: Integer;
     function GetDeal(Index: Integer): TDeal;
     procedure GenerateSolvableDeals;
-    procedure GenerateRandomDeals;
+    procedure GenerateRandomDeals(aCount: Integer);
   public
     constructor Create;
     destructor Destroy; override;
     procedure Clear;
-    procedure GenerateDeals(); // params?
+    procedure GenerateDeals(aRandomCount: Integer = 2); // params?
 
     property Count: Integer read GetCount;
     property Deals[Index: Integer]: TDeal read GetDeal;
@@ -75,38 +75,28 @@ begin
   fDeals.Clear;
 end;
 
-procedure TDealGenerator.GenerateDeals;
+procedure TDealGenerator.GenerateDeals(aRandomCount: Integer);
 begin
   Clear;
   GenerateSolvableDeals;
-  GenerateRandomDeals;
+  GenerateRandomDeals(aRandomCount);
 end;
 
-procedure TDealGenerator.GenerateRandomDeals;
+procedure TDealGenerator.GenerateRandomDeals(aCount: Integer);
+
 begin
-  // create one random deal
-  var cards := TCardStack.Create;
-  TDealer.PopulateNewDeck(cards);
-  TShuffler.Shuffle(cards);
+  for var i := 1 to aCount do
+  begin
+    var cards := TCardStack.Create;
+    TDealer.PopulateNewDeck(cards);
+    TShuffler.Shuffle(cards);
 
-  var deal := Default(TDeal);
-  deal.Title := 'Random-1';
-  deal.Difficulty := ddUnsolved;
-  deal.Cards := cards._Cards.ToArray;
-  fDeals.Add(deal);
-
-  // ---
-
-  cards.Clear;
-  TDealer.PopulateNewDeck(cards);
-  TShuffler.Shuffle(cards);
-
-  deal := Default(TDeal);
-  deal.Title := 'Random-2';
-  deal.Difficulty := ddUnsolved;
-  deal.Cards := cards._cards.ToArray;
-
-  fDeals.Add(deal);
+    var deal := Default(TDeal);
+    deal.Title := 'Random-' + i.ToString;
+    deal.Difficulty := ddUnsolved;
+    deal.Cards := cards._Cards.ToArray;
+    fDeals.Add(deal);
+  end;
 end;
 
 procedure TDealGenerator.GenerateSolvableDeals;
