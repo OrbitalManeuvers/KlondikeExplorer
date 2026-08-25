@@ -56,7 +56,10 @@ uses
   u_TestUnits in 'tests\u_TestUnits.pas',
   u_SnapshotTests in 'tests\u_SnapshotTests.pas',
   u_SnapshotLibraries in 'ui\u_SnapshotLibraries.pas',
-  u_HintGenerators in 'games\u_HintGenerators.pas';
+  u_HintGenerators in 'games\u_HintGenerators.pas',
+  u_AStarSolvers in 'solvers\u_AStarSolvers.pas',
+  u_DealCreators in 'games\u_DealCreators.pas',
+  u_SolvableDealCreators in 'games\u_SolvableDealCreators.pas';
 
 {$R *.res}
 

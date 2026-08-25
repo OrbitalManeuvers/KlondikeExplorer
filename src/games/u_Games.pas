@@ -136,29 +136,7 @@ procedure TKlondikeGame.BuildHintList;
 begin
   fHintIndex := -1;
   fHintMoves.Clear;
-
-  var scratch := TMoveList.Create();
-  try
-
-    // todo: implement THintGenerator.GenerateHints(Table, moveList);
-
-    TMoveGenerator.GenerateMoves(fTable, scratch);
-
-    // !! MS Solitaire has opinions here. tableau twins don't show as a move until
-    // the covered twin can be moved to foundation.
-
-    // my system generates a move to the twin as mechanically valid,
-    // this used to get filtered out as cyclic. This needs design.
-
-    for var m in scratch do
-      if TMoveValidator.IsValidMove(m, fTable) then
-      begin
-        if m.Source <> siStock then
-          fHintMoves.Add(m);
-      end;
-  finally
-    scratch.Free;
-  end;
+  THintGenerator.GenerateHints(fTable, fHintMoves);
 
   if fHintMoves.Count > 0 then
     fHintIndex := 0;

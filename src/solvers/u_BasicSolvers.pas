@@ -125,6 +125,11 @@ begin
 
   fVisited.Add(snap);
 
+  // notify observer of the new state being explored
+  NotifyStateVisited(fDepth);
+  if (fNodesExplored mod 1000) = 0 then
+    NotifyProgress(fNodesExplored);
+
   var sortedMoves: TArray<TMove> := [];
 
   var moveList := TMoveList.Create;
@@ -154,6 +159,7 @@ begin
     fSnapshots.Load(token, fSnapshot);
     fSnapshot.Restore(aTable);
     fSnapshots.Delete(token);
+    NotifyBacktrack(fDepth);
   end;
 
   Result := False;

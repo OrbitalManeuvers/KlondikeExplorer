@@ -37,26 +37,8 @@ begin
 
     mtDraw:
       begin
-        // a move can be generated that requires a recycle mid-transfer
-        // so, it's easier to just empty the stock in natural order if it
-        // doesn't contain enough cards, and then let the recycle happen
-        if source.Count < aMove.Count then
-        begin
-          while source.HasCards do
-            target.Add(source._Pop);
-        end;
-
-        if source.IsEmpty and target.HasCards then
-        begin
-          while target.HasCards do
-            source.Add(target._Pop);
-
-          // bump the table's recycle counter
-          aTable.RecycleCount := aTable.RecycleCount + 1;
-        end;
-
-        // execute the move
-        for var i := 1 to aMove.Count do
+        var moveCount := Min(aMove.Count, source.Count);
+        for var i := 1 to moveCount do
           target.Add(source._Pop);
       end;
 

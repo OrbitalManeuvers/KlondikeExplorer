@@ -11,7 +11,7 @@ type
     fLimits: TSolverLimits;
     fCancelled: Boolean;
   protected
-    procedure NotifyStateVisited(aDepth: Integer; aScore: Single);
+    procedure NotifyStateVisited(aDepth: Integer);
     procedure NotifyBacktrack(aDepth: Integer);
     procedure NotifyProgress(aNodesExplored: Cardinal);
     function IsCancelled: Boolean;
@@ -37,10 +37,10 @@ begin
   Result := fCancelled;
 end;
 
-procedure TSolver.NotifyStateVisited(aDepth: Integer; aScore: Single);
+procedure TSolver.NotifyStateVisited(aDepth: Integer);
 begin
   if Assigned(fObserver) then
-    fObserver.OnStateVisited(aDepth, aScore);
+    fObserver.OnStateVisited(aDepth);
 end;
 
 procedure TSolver.NotifyBacktrack(aDepth: Integer);

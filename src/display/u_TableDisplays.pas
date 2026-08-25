@@ -130,7 +130,7 @@ begin
         TRenderUtils.DrawCardBack(aCanvas, r)
       else
       begin
-        if Table.Waste.HasCards then
+        if Table.Waste.HasCards and (not fPreviewMode) then
           TRenderUtils.DrawCardHighlight(aCanvas, r, TAlphaColors.Coral, fStockPulse.Value)
         else
           TRenderUtils.DrawEmptySlot(aCanvas, r);

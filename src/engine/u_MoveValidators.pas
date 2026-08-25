@@ -72,10 +72,10 @@ var
 begin
   Result := False;
 
-  i := TMoveInfo.Create;
+  i := TMoveInfo.Create(aTable);
   try
     // populate move info structure
-    i.Load(aMove, aTable);
+    i.Load(aMove);
 
     // check basic legality
     if not (i.Target.Category in LEGAL_MOVE_TARGETS[i.Source.Category]) then

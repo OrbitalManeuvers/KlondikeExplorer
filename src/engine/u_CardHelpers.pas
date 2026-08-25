@@ -25,6 +25,7 @@ type
     function Equals(aValue: TCard): Boolean; overload;
     function Matches(aValue: TCardValue; aColor: TCardColor): Boolean; overload;
     function Matches(aDescriptor: TCardDescriptor): Boolean; overload;
+    function IsTwin(aValue: TCard): Boolean;
   end;
 
 implementation
@@ -126,6 +127,11 @@ end;
 function TCardHelper.Matches(aDescriptor: TCardDescriptor): Boolean;
 begin
   Result := Self.Matches(aDescriptor.Value, aDescriptor.Color);
+end;
+
+function TCardHelper.IsTwin(aValue: TCard): Boolean;
+begin
+  Result := (aValue.Color = Self.Color) and (aValue.Value = Self.Value);
 end;
 
 

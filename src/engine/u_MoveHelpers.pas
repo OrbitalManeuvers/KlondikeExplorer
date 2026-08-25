@@ -21,20 +21,21 @@ type
   // summary info
   TMoveInfo = class
   private
+    fTable: TTable;
     fMoveCards: TList<TCard>;
   public
-    Table: TTable;
     MoveCount: Integer;
     MoveType: TMoveType;
     Source: TMoveComponent;
     Target: TMoveComponent;
     NextFoundation: array[TCardSuit] of TCardValue;
 
-    constructor Create;
+    constructor Create(aTable: TTable);
     destructor Destroy; override;
+    property Table: TTable read fTable;
 
     property MoveCards: TList<TCard> read fMoveCards;
-    procedure Load(const aMove: TMove; aTable: TTable);
+    procedure Load(const aMove: TMove);
   end;
 
 
@@ -140,10 +141,21 @@ end;
 
 { TMoveInfo }
 
-constructor TMoveInfo.Create;
+constructor TMoveInfo.Create(aTable: TTable);
 begin
   inherited Create;
+  fTable := aTable;
   fMoveCards := TList<TCard>.Create;
+
+  // a quick setup of which foundation cards are required next
+  for var f := Low(TCardSuit) to High(TCardSuit) do
+  begin
+    // setting a King to an Ace just as an unreachable value
+    if fTable.Foundation[f].IsEmpty or (fTable.Foundation[f].Last.Value = cvKing) then
+      NextFoundation[f] := cvAce
+    else
+      NextFoundation[f] := Succ(fTable.Foundation[f].Last.Value);
+  end;
 end;
 
 destructor TMoveInfo.Destroy;
@@ -152,32 +164,20 @@ begin
   inherited;
 end;
 
-procedure TMoveInfo.Load(const aMove: TMove; aTable: TTable);
+procedure TMoveInfo.Load(const aMove: TMove);
 begin
-  Self.Table := aTable;
   Self.MoveCount := aMove.Count;
   Self.Source.Id := aMove.Source;
   Self.Source.Category := StackIdToCategory(Self.Source.Id);
-  Self.Source.Stack := aTable.Stacks[aMove.Source];
+  Self.Source.Stack := fTable.Stacks[aMove.Source];
 
   Self.Target.Id := aMove.Target;
   Self.Target.Category := StackIdToCategory(Self.Target.Id);
-  Self.Target.Stack := aTable.Stacks[Self.Target.Id];
+  Self.Target.Stack := fTable.Stacks[Self.Target.Id];
   Self.MoveType := aMove.GetMoveType;
 
   fMoveCards.Count := 0;
   Self.Source.Stack.GetLastCards(fMoveCards, Self.MoveCount, False);
-
-  // a quick setup of which foundation cards are required next
-  for var f := Low(TCardSuit) to High(TCardSuit) do
-  begin
-    // setting a King to an Ace just as an unreachable value
-    if Table.Foundation[f].IsEmpty or (Table.Foundation[f].Last.Value = cvKing) then
-      NextFoundation[f] := cvAce
-    else
-      NextFoundation[f] := Succ(Table.Foundation[f].Last.Value);
-  end;
-
 end;
 
 
