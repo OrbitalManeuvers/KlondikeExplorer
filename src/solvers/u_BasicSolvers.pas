@@ -24,8 +24,20 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    function Solve(aDeck: TCardStack): TSolverOutcome; override;
+    function Solve(InitialState: TSnapshot): TSolverOutcome; override;
   end;
+
+(*
+todo: simple move sort:
+
+Foundation moves (Always prioritize clearing cards)
+Tableau flips (Exposing a face-down card reveals new information)
+King to empty column (Unlocks a buried pile)
+Tableau-to-tableau moves (Rearranging the board)
+Draw from stock / Reset waste (Usually the lowest priority unless stuck)
+
+*)
+
 
 implementation
 
@@ -55,7 +67,7 @@ begin
   inherited;
 end;
 
-function TBasicSolver.Solve(aDeck: TCardStack): TSolverOutcome;
+function TBasicSolver.Solve(InitialState: TSnapshot): TSolverOutcome;
 begin
   Result := Default(TSolverOutcome);
 
@@ -67,27 +79,24 @@ begin
   fSnapshots.Clear;
   fSolution := nil;
 
-  TDealer.Deal(aDeck, fTable);
-  try
-    if DoSearch(fTable) then
-    begin
-      Result.Result := srSolved;
-      Result.Moves := fSolution;
-    end
-    else if IsCancelled then
-      Result.Result := srCancelled
-    else if (Limits.MaxNodes > 0) and (fNodesExplored >= Limits.MaxNodes) then
-      Result.Result := srLimitReached
-    else if (Limits.MaxDepth > 0) and (fMaxDepth >= Limits.MaxDepth) then
-      Result.Result := srLimitReached
-    else
-      Result.Result := srUnsolved;
+  InitialState.Restore(fTable);
 
-    Result.NodesExplored := fNodesExplored;
-    Result.MaxDepthReached := fMaxDepth;
-  finally
-    TDealer.Repack(fTable, aDeck);
-  end;
+  if DoSearch(fTable) then
+  begin
+    Result.Result := srSolved;
+    Result.Moves := fSolution;
+  end
+  else if IsCancelled then
+    Result.Result := srCancelled
+  else if (Limits.MaxNodes > 0) and (fNodesExplored >= Limits.MaxNodes) then
+    Result.Result := srLimitReached
+  else if (Limits.MaxDepth > 0) and (fMaxDepth >= Limits.MaxDepth) then
+    Result.Result := srLimitReached
+  else
+    Result.Result := srUnsolved;
+
+  Result.NodesExplored := fNodesExplored;
+  Result.MaxDepthReached := fMaxDepth;
 end;
 
 function TBasicSolver.IsSolved(aTable: TTable): Boolean;

@@ -12,7 +12,7 @@ const
   COLUMN_GAP_FRACTION = 0.015;      // gap between columns as fraction of control width
   TOP_ROW_GAP_FRACTION = 0.03;      // gap between top row and tableau row as fraction of control height
 
-  COLOR_PREVIEW_BK = $FFEFF0FF;
+  COLOR_PREVIEW_BK = $FF222222; //$FFEFF0FF;
   COLOR_PREVIEW_GRID = $2F5C9DFF;
   PREVIEW_ALPHA = 170;
   COLOR_TABLE_BK = $FF2b7529;

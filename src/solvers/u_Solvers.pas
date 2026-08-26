@@ -2,7 +2,7 @@ unit u_Solvers;
 
 interface
 
-uses u_CardStacks, u_ObserverTypes, u_SolverTypes;
+uses u_CardStacks, u_ObserverTypes, u_SolverTypes, u_Snapshots;
 
 type
   TSolver = class
@@ -16,7 +16,7 @@ type
     procedure NotifyProgress(aNodesExplored: Cardinal);
     function IsCancelled: Boolean;
   public
-    function Solve(aDeck: TCardStack): TSolverOutcome; virtual; abstract;
+    function Solve(InitialState: TSnapshot): TSolverOutcome; virtual; abstract;
     procedure Cancel;
 
     property Observer: ISolverObserver read fObserver write fObserver;

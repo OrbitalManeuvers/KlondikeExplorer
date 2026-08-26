@@ -14,19 +14,18 @@ type
     fStopwatch: TStopwatch;
     fStockPulse: TCycler;
 
-    procedure AdoptState(aTable: TTable);
   protected
-    property PreviewMode: Boolean read fPreviewMode;
     property Table: TTable read fTable;
     property Stopwatch: TStopwatch read fStopwatch;
   public
     constructor Create;
     destructor Destroy; override;
     procedure ClearTable;
-    procedure PreviewTable(aTable: TTable);
+
     procedure UpdateTable(aTable: TTable);
 
     procedure Draw(aCanvas: ISkCanvas; const aLayout: TLayout); virtual;
+    property PreviewMode: Boolean read fPreviewMode write fPreviewMode;
   end;
 
 implementation
@@ -101,9 +100,7 @@ begin
       end
       else
       begin
-        if fPreviewMode then
-          TRenderUtils.DrawEmptySlot(aCanvas, r)
-        else
+        if not fPreviewMode then
           TRenderUtils.DrawEmptySuitSlot(aCanvas, r, StackIdToSuit(stackId));
         end;
     end;
@@ -132,7 +129,7 @@ begin
       begin
         if Table.Waste.HasCards and (not fPreviewMode) then
           TRenderUtils.DrawCardHighlight(aCanvas, r, TAlphaColors.Coral, fStockPulse.Value)
-        else
+        else if not fPreviewMode then
           TRenderUtils.DrawEmptySlot(aCanvas, r);
       end;
     end;
@@ -143,7 +140,8 @@ begin
       var r := aLayout.CardRect(aLayout.Origins[stackId]);
       if Table.Stacks[stackId].IsEmpty then
       begin
-        TRenderUtils.DrawEmptySlot(aCanvas, r);
+        if not PreviewMode then
+          TRenderUtils.DrawEmptySlot(aCanvas, r);
       end
       else
       begin
@@ -164,36 +162,15 @@ begin
 
 end;
 
-procedure TTableDisplay.AdoptState(aTable: TTable);
-begin
-  // just adopt the contents and next update will show new state
-  fSnapshot.Capture(aTable);
-  fSnapshot.Restore(fTable);
-end;
-
 procedure TTableDisplay.ClearTable;
 begin
   fTable.Clear;
 end;
 
-procedure TTableDisplay.PreviewTable(aTable: TTable);
-begin
-  if Assigned(aTable) then
-  begin
-    AdoptState(aTable);
-    fPreviewMode := True;
-  end
-  else
-  begin
-    ClearTable;
-    fPreviewMode := True;
-  end;
-end;
-
 procedure TTableDisplay.UpdateTable(aTable: TTable);
 begin
-  fPreviewMode := False;
-  AdoptState(aTable);
+  fSnapshot.Capture(aTable);
+  fSnapshot.Restore(fTable);
 end;
 
 end.

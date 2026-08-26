@@ -19,7 +19,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    function Solve(aDeck: TCardStack): TSolverOutcome; override;
+    function Solve(InitialState: TSnapshot): TSolverOutcome; override;
   end;
 
 implementation
@@ -65,7 +65,7 @@ begin
       Exit(False);
 end;
 
-function TAStarSolver.Solve(aDeck: TCardStack): TSolverOutcome;
+function TAStarSolver.Solve(InitialState: TSnapshot): TSolverOutcome;
 var
   openList: TList<TAStarNode>;
 
@@ -88,135 +88,134 @@ begin
   fClosed.Clear;
   fSnapshots.Clear;
 
-  TDealer.Deal(aDeck, fTable);
+  InitialState.Restore(fTable);
+
+  // seed the open list with the initial state
+  fSnapshot.Capture(fTable);
+  var startHash := fSnapshot.AsText;
+  fClosed.Add(startHash);
+
+  var startNode: TAStarNode;
+  startNode.Token := fSnapshots.Save(fSnapshot);
+  startNode.G := 0;
+  startNode.F := THeuristic.Score(fTable);
+  startNode.Moves := [];
+
+  openList := TList<TAStarNode>.Create;
   try
-    // seed the open list with the initial state
-    fSnapshot.Capture(fTable);
-    var startHash := fSnapshot.AsText;
-    fClosed.Add(startHash);
+    openList.Add(startNode);
 
-    var startNode: TAStarNode;
-    startNode.Token := fSnapshots.Save(fSnapshot);
-    startNode.G := 0;
-    startNode.F := THeuristic.Score(fTable);
-    startNode.Moves := [];
+    while openList.Count > 0 do
+    begin
+      // check cancellation
+      if IsCancelled then
+        Break;
 
-    openList := TList<TAStarNode>.Create;
-    try
-      openList.Add(startNode);
+      // check node limit
+      if (Limits.MaxNodes > 0) and (fNodesExplored >= Limits.MaxNodes) then
+        Break;
 
-      while openList.Count > 0 do
+      var current := ExtractMin;
+      Inc(fNodesExplored);
+
+      if current.G > fMaxDepth then
+        fMaxDepth := current.G;
+
+      // restore state from the node's token
+      fSnapshots.Load(current.Token, fSnapshot);
+      fSnapshot.Restore(fTable);
+      fSnapshots.Delete(current.Token);
+
+      // check for goal
+      if IsSolved(fTable) then
       begin
-        // check cancellation
-        if IsCancelled then
-          Break;
+        Result.Result := srSolved;
+        Result.Moves := current.Moves;
+        Result.NodesExplored := fNodesExplored;
+        Result.MaxDepthReached := fMaxDepth;
 
-        // check node limit
-        if (Limits.MaxNodes > 0) and (fNodesExplored >= Limits.MaxNodes) then
-          Break;
-
-        var current := ExtractMin;
-        Inc(fNodesExplored);
-
-        if current.G > fMaxDepth then
-          fMaxDepth := current.G;
-
-        // restore state from the node's token
-        fSnapshots.Load(current.Token, fSnapshot);
-        fSnapshot.Restore(fTable);
-        fSnapshots.Delete(current.Token);
-
-        // check for goal
-        if IsSolved(fTable) then
-        begin
-          Result.Result := srSolved;
-          Result.Moves := current.Moves;
-          Result.NodesExplored := fNodesExplored;
-          Result.MaxDepthReached := fMaxDepth;
-
-          // clean up remaining open-list tokens
-          for var i := 0 to openList.Count - 1 do
-            fSnapshots.Delete(openList[i].Token);
-          Exit;
-        end;
-
-        // check depth limit
-        if (Limits.MaxDepth > 0) and (current.G >= Limits.MaxDepth) then
-          Continue;
-
-        // notify observer periodically
-        if (fNodesExplored mod 1000) = 0 then
-          NotifyProgress(fNodesExplored);
-
-        // expand successors
-        var moveList := TMoveList.Create;
-        try
-          TMoveGenerator.GenerateMoves(fTable, moveList);
-
-          for var i := 0 to moveList.Count - 1 do
-          begin
-            if not TMoveValidator.IsValidMove(moveList[i], fTable) then
-              Continue;
-
-            // apply move on a scratch copy
-            fSnapshot.Capture(fTable);
-            var scratchToken := fSnapshots.Save(fSnapshot);
-
-            TMoveExecutor.ExecuteMove(fTable, moveList[i]);
-
-            // check closed set
-            fSnapshot.Capture(fTable);
-            var hash := fSnapshot.AsText;
-
-            if not fClosed.Contains(hash) then
-            begin
-              fClosed.Add(hash);
-
-              var childNode: TAStarNode;
-              childNode.Token := fSnapshots.Save(fSnapshot);
-              childNode.G := current.G + 1;
-              childNode.F := childNode.G + THeuristic.Score(fTable);
-              childNode.Moves := Copy(current.Moves);
-              SetLength(childNode.Moves, Length(childNode.Moves) + 1);
-              childNode.Moves[High(childNode.Moves)] := moveList[i];
-
-              openList.Add(childNode);
-            end;
-
-            // restore parent state
-            fSnapshots.Load(scratchToken, fSnapshot);
-            fSnapshot.Restore(fTable);
-            fSnapshots.Delete(scratchToken);
-          end;
-        finally
-          moveList.Free;
-        end;
+        // clean up remaining open-list tokens
+        for var i := 0 to openList.Count - 1 do
+          fSnapshots.Delete(openList[i].Token);
+        Exit;
       end;
 
-      // search ended without solution — clean up remaining tokens
-      for var i := 0 to openList.Count - 1 do
-        fSnapshots.Delete(openList[i].Token);
+      // check depth limit
+      if (Limits.MaxDepth > 0) and (current.G >= Limits.MaxDepth) then
+        Continue;
 
-    finally
-      openList.Free;
+      // notify observer periodically
+      if (fNodesExplored mod 1000) = 0 then
+        NotifyProgress(fNodesExplored);
+
+      // expand successors
+      var moveList := TMoveList.Create;
+      try
+        TMoveGenerator.GenerateMoves(fTable, moveList);
+
+        for var i := 0 to moveList.Count - 1 do
+        begin
+          if not TMoveValidator.IsValidMove(moveList[i], fTable) then
+            Continue;
+
+          // apply move on a scratch copy
+          fSnapshot.Capture(fTable);
+          var scratchToken := fSnapshots.Save(fSnapshot);
+
+          TMoveExecutor.ExecuteMove(fTable, moveList[i]);
+
+          // check closed set
+          fSnapshot.Capture(fTable);
+          var hash := fSnapshot.AsText;
+
+          if not fClosed.Contains(hash) then
+          begin
+            fClosed.Add(hash);
+
+            var childNode: TAStarNode;
+            childNode.Token := fSnapshots.Save(fSnapshot);
+            childNode.G := current.G + 1;
+            childNode.F := childNode.G + THeuristic.Score(fTable);
+            childNode.Moves := Copy(current.Moves);
+            SetLength(childNode.Moves, Length(childNode.Moves) + 1);
+            childNode.Moves[High(childNode.Moves)] := moveList[i];
+
+            openList.Add(childNode);
+          end;
+
+          // restore parent state
+          fSnapshots.Load(scratchToken, fSnapshot);
+          fSnapshot.Restore(fTable);
+          fSnapshots.Delete(scratchToken);
+        end;
+      finally
+        moveList.Free;
+      end;
     end;
 
-    // determine outcome
-    if Result.Result <> srSolved then
-    begin
-      if IsCancelled then
-        Result.Result := srCancelled
-      else if (Limits.MaxNodes > 0) and (fNodesExplored >= Limits.MaxNodes) then
-        Result.Result := srLimitReached
-      else
-        Result.Result := srUnsolved;
-    end;
+    // search ended without solution — clean up remaining tokens
+    for var i := 0 to openList.Count - 1 do
+      fSnapshots.Delete(openList[i].Token);
 
-    Result.NodesExplored := fNodesExplored;
-    Result.MaxDepthReached := fMaxDepth;
   finally
-    TDealer.Repack(fTable, aDeck);
+    openList.Free;
   end;
+
+  // determine outcome
+  if Result.Result <> srSolved then
+  begin
+    if IsCancelled then
+      Result.Result := srCancelled
+    else if (Limits.MaxNodes > 0) and (fNodesExplored >= Limits.MaxNodes) then
+      Result.Result := srLimitReached
+    else
+      Result.Result := srUnsolved;
+  end;
+
+  Result.NodesExplored := fNodesExplored;
+  Result.MaxDepthReached := fMaxDepth;
+
+
 end;
 
 end.

@@ -1,14 +1,14 @@
-unit fr_GameMode;
+unit fr_TableView;
 
 interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, fr_ContentFrame, Vcl.StdCtrls,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.Buttons, Vcl.ControlList,
   System.Types, System.Skia, System.Actions, Vcl.ActnList, PngSpeedButton, Vcl.Skia,
 
-  u_Types, u_CardStacks, u_DealGenerators, u_Tables, u_Games, u_TableDisplays, u_GameDisplays,
+  u_Types, u_CardStacks, u_Tables, u_Games, u_TableDisplays, u_GameDisplays,
   u_Layouts, u_CardResources, u_Snapshots, u_MoveLists, u_AnimationTypes;
 
 type
@@ -21,44 +21,22 @@ type
     GrabOffset: TPointF;      // mouse-down position relative to card top-left
   end;
 
-  TGameFrame = class(TContentFrame)
-    pnlGameControls: TPanel;
-    pcControlPages: TPageControl;
-    tsSetupMode: TTabSheet;
-    tsLiveMode: TTabSheet;
-    StateList: TControlList;
-    btnGenerateDeals: TSpeedButton;
-    btnStartLiveMode: TSpeedButton;
-    lblDealTitle: TLabel;
-    lblDealDescription: TLabel;
+  TTableView = class(TFrame)
     skTable: TSkAnimatedPaintBox;
-    btnUndo: TPngSpeedButton;
     GameActions: TActionList;
-    actRegen: TAction;
-    actStartLiveMode: TAction;
     actUndo: TAction;
-    btnRedo: TPngSpeedButton;
     actRedo: TAction;
     actHint: TAction;
-    btnHint: TPngSpeedButton;
-    btnRestart: TPngSpeedButton;
     actRestart: TAction;
-    actEndLiveMode: TAction;
-    btnEndGame: TPngSpeedButton;
-    GroupBox1: TGroupBox;
-    edtSnapshotName: TEdit;
-    Label1: TLabel;
-    btnSaveSnapshot: TPngSpeedButton;
-    Label2: TLabel;
-    btnNewDeals: TSpeedButton;
-    btnSnapshots: TSpeedButton;
-    rbStarting: TRadioButton;
-    rbCurrentState: TRadioButton;
-    btnAutoComplete: TPngSpeedButton;
     actAutoComplete: TAction;
-    procedure StateListBeforeDrawItem(AIndex: Integer; ACanvas: TCanvas;
-      ARect: TRect; AState: TOwnerDrawState);
-    procedure StateListClick(Sender: TObject);
+    Toolbar: TPanel;
+    btnHint: TSpeedButton;
+    btnUndo: TSpeedButton;
+    btnRedo: TSpeedButton;
+    actSnapshot: TAction;
+    btnSnapshot: TSpeedButton;
+    btnRestart: TSpeedButton;
+    btnComplete: TSpeedButton;
     procedure skTableAnimationDraw(ASender: TObject; const ACanvas: ISkCanvas;
       const ADest: TRectF; const AProgress: Double; const AOpacity: Single);
     procedure skTableMouseDown(Sender: TObject; Button: TMouseButton;
@@ -68,21 +46,14 @@ type
     procedure skTableMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure skTableResize(Sender: TObject);
-    procedure actRegenExecute(Sender: TObject);
-    procedure actStartLiveModeExecute(Sender: TObject);
     procedure actUndoExecute(Sender: TObject);
     procedure actRedoExecute(Sender: TObject);
     procedure actHintExecute(Sender: TObject);
     procedure actRestartExecute(Sender: TObject);
-    procedure actEndLiveModeExecute(Sender: TObject);
-    procedure StateListItemDblClick(Sender: TObject);
-    procedure StartStateChange(Sender: TObject);
-    procedure edtSnapshotNameChange(Sender: TObject);
-    procedure btnSaveSnapshotClick(Sender: TObject);
     procedure actAutoCompleteExecute(Sender: TObject);
+    procedure actSnapshotExecute(Sender: TObject);
 
   private
-    fDealGenerator: TDealGenerator;
     fGame: TKlondikeGame;
     fDisplay: TGameDisplay;
     fLayout: TLayout;
@@ -96,21 +67,17 @@ type
     fMouseIsDown: Boolean;
     fMouseDownPos: TPoint;
     fDragInfo: TDragInfo;
+    fPreviewMode: Boolean;
 
     procedure UpdateControls;
-    procedure PreviewDeal(aIndex: Integer);
-    procedure PreviewSnapshot(aIndex: Integer);
-    procedure LoadDeal(aDealIndex: Integer; aTable: TTable); overload;
-    procedure LoadDeal(aDealIndex: Integer; aDeck: TCardStack); overload;
     procedure HandleAnimationComplete(Sender: TObject; const Animation: IAnimation);
     procedure DoExecuteMove(aMove: TMove; aImmediate: Boolean = False);
-    function ValidSnapshotName(const aName: string): Boolean;
-    procedure UpdateStatePreview;
+    procedure SetPreviewMode(const Value: Boolean);
   public
-    procedure InitContent; override;
-    procedure DoneContent; override;
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
 
-
+    property PreviewMode: Boolean read fPreviewMode write SetPreviewMode;
   end;
 
 
@@ -132,21 +99,15 @@ begin
     (Abs(MouseDown.Y - MouseUp.Y) < zone);
 end;
 
-{ TGameFrame }
+{ TTableView }
 
-procedure TGameFrame.InitContent;
+constructor TTableView.Create(AOwner: TComponent);
 begin
   inherited;
 
-  { !! }
-  RandSeed := 12345;
-
-
   // lifetime assets
-  fDealGenerator := TDealGenerator.Create;
   fGame := TKlondikeGame.Create;
   fDisplay := TGameDisplay.Create;
-  fDisplay.PreviewTable(nil);
   fDisplay.OnAnimateComplete := HandleAnimationComplete;
   fCardResources := TCardResources.Create;
   TRenderUtils.SetResources(fCardResources);
@@ -156,22 +117,17 @@ begin
   fDragInfo := Default(TDragInfo);
   fMouseIsDown := False;
 
+  SetPreviewMode(True);
+
   // UI setup
-  lblDealTitle.Font.Color := StyleServices.GetStyleFontColor(sfCaptionTextNormal);
-  lblDealDescription.Font.Color := StyleServices.GetStyleFontColor(sfCaptionTextInactive);
-  pcControlPages.ActivePage := tsSetupMode;
-  UpdateControls;
-
   skTable.BackgroundColor := COLOR_TABLE_BK;
-
-//  fDisplay.PreviewTable(nil);
+  UpdateControls;
 end;
 
-procedure TGameFrame.DoneContent;
+destructor TTableView.Destroy;
 begin
   fDisplay.Free;
   fGame.Free;
-  fDealGenerator.Free;
   fCardResources.Free;
   fLocalTable.Free;
   fInitialState.Free;
@@ -179,108 +135,38 @@ begin
   inherited;
 end;
 
-procedure TGameFrame.edtSnapshotNameChange(Sender: TObject);
+procedure TTableView.UpdateControls;
 begin
-  // live checking of name uniqueness
-  UpdateControls;
+  // game actions
+  actUndo.Enabled := (not PreviewMode) and fGame.CanUndo;
+  actRedo.Enabled := (not PreviewMode) and fGame.CanRedo;
+  actHint.Enabled := (not PreviewMode);
+  actRestart.Enabled := (not PreviewMode);
+  actAutoComplete.Enabled := (not PreviewMode) and fGame.CanAutoComplete;
+
+  actSnapshot.Enabled := (not PreviewMode);
 end;
 
-function TGameFrame.ValidSnapshotName(const aName: string): Boolean;
+procedure TTableView.actSnapshotExecute(Sender: TObject);
 begin
-  Result := (aName.Length > 0) and (SnapshotLibrary.IndexOfName(aName) = -1);
+
+  //
 end;
 
-procedure TGameFrame.UpdateControls;
-begin
-  var liveMode := pcControlPages.ActivePage = tsLiveMode;
-
-  // setup page
-  actStartLiveMode.Enabled := StateList.ItemIndex <> -1;
-  actRegen.Enabled := btnNewDeals.Down;
-
-  // game page
-  actUndo.Enabled := liveMode and fGame.CanUndo;
-  actRedo.Enabled := liveMode and fGame.CanRedo;
-  actHint.Enabled := liveMode;
-  actRestart.Enabled := liveMode;
-  actEndLivemode.Enabled := liveMode;
-  actAutoComplete.Enabled := fGame.CanAutoComplete;
-
-  btnSaveSnapshot.Enabled := ValidSnapshotName(edtSnapshotName.Text);
-end;
-
-procedure TGameFrame.actStartLiveModeExecute(Sender: TObject);
-begin
-  var stateIndex := StateList.ItemIndex;
-  if stateIndex <> -1 then
-  begin
-
-    if btnNewDeals.Down then
-    begin
-      // load selected deal into a table, then take a snapshot
-      LoadDeal(stateIndex, fLocalTable);
-      fInitialState.Capture(fLocalTable);
-      edtSnapshotName.Text := fDealGenerator.Deals[stateIndex].Title;
-    end
-    else if btnSnapshots.Down then
-    begin
-      // load a snapshot with the selected library entry
-      SnapshotLibrary.LoadSnapshot(stateIndex, fInitialState);
-      edtSnapshotName.Text := SnapshotLibrary.Names[stateIndex];
-    end;
-
-    fGame.Initialize(fInitialState);  // does a Restart
-    fDisplay.UpdateTable(fGame.Table);
-
-    // switch to game controls
-    pcControlPages.ActivePage := tsLiveMode;
-  end;
-
-  UpdateControls;
-end;
-
-procedure TGameFrame.actUndoExecute(Sender: TObject);
+procedure TTableView.actUndoExecute(Sender: TObject);
 begin
   fGame.Undo;
   fDisplay.UpdateTable(fGame.Table);
   UpdateControls;
 end;
 
-procedure TGameFrame.btnSaveSnapshotClick(Sender: TObject);
-begin
-  //
-  if rbCurrentState.Checked then
-  begin
-    var s := TSnapshot.Create;
-    try
-      s.Capture(fGame.Table);
-      SnapshotLibrary.Add(edtSnapshotName.Text, s);
-    finally
-      s.Free;
-    end;
-  end
-  else if rbStarting.Checked then
-  begin
-    SnapshotLibrary.Add(edtSnapshotName.Text, fInitialState);
-  end;
-end;
-
-procedure TGameFrame.actAutoCompleteExecute(Sender: TObject);
+procedure TTableView.actAutoCompleteExecute(Sender: TObject);
 begin
 //
 
 end;
 
-procedure TGameFrame.actEndLiveModeExecute(Sender: TObject);
-begin
-  pcControlPages.ActivePage := tsSetupMode;
-  fDisplay.PreviewTable(nil);
-
-  StartStateChange(nil);
-  UpdateControls;
-end;
-
-procedure TGameFrame.actHintExecute(Sender: TObject);
+procedure TTableView.actHintExecute(Sender: TObject);
 begin
   var hintMove: TMove;
   if fGame.GetNextHint(hintMove) then
@@ -291,32 +177,21 @@ begin
   end;
 end;
 
-procedure TGameFrame.actRedoExecute(Sender: TObject);
+procedure TTableView.actRedoExecute(Sender: TObject);
 begin
   fGame.Redo;
   fDisplay.UpdateTable(fGame.Table);
   UpdateControls;
 end;
 
-procedure TGameFrame.actRegenExecute(Sender: TObject);
-begin
-  fDisplay.PreviewTable(nil);
-
-  // populate list of deals
-  fDealGenerator.GenerateDeals;
-
-  StateList.ItemCount := fDealGenerator.Count;
-  UpdateControls;
-end;
-
-procedure TGameFrame.actRestartExecute(Sender: TObject);
+procedure TTableView.actRestartExecute(Sender: TObject);
 begin
   fGame.Restart;
   fDisplay.UpdateTable(fGame.Table);
   UpdateControls;
 end;
 
-procedure TGameFrame.HandleAnimationComplete(Sender: TObject;
+procedure TTableView.HandleAnimationComplete(Sender: TObject;
   const Animation: IAnimation);
 begin
   var todoList := Animation.GetCompletionActions;
@@ -336,119 +211,16 @@ begin
   end;
 end;
 
-procedure TGameFrame.StateListBeforeDrawItem(AIndex: Integer;
-  ACanvas: TCanvas; ARect: TRect; AState: TOwnerDrawState);
+procedure TTableView.SetPreviewMode(const Value: Boolean);
 begin
-  if btnNewDeals.Down then
+  if Value <> fPreviewMode then
   begin
-    if (AIndex >= 0) and (AIndex < fDealGenerator.Count) then
-    begin
-      lblDealTitle.Caption := fDealGenerator.Deals[AIndex].Title;
-      lblDealDescription.Caption := fDealGenerator.Deals[AIndex].Difficulty.AsString;
-    end;
-  end
-  else
-  begin
-    if (AIndex >= 0) and (AIndex < SnapshotLibrary.Count) then
-    begin
-      lblDealTitle.Caption := SnapshotLibrary.Names[AIndex];
-      lblDealDescription.Caption := ddUnknown.AsString;
-    end;
+    fPreviewMode := Value;
+    fDisplay.PreviewMode := fPreviewMode;
   end;
 end;
 
-procedure TGameFrame.StateListClick(Sender: TObject);
-begin
-  UpdateStatePreview;
-  UpdateControls;
-end;
-
-procedure TGameFrame.UpdateStatePreview;
-begin
-  fDisplay.PreviewTable(nil);
-  var index := StateList.ItemIndex;
-  if index <> -1 then
-  begin
-    if btnNewDeals.Down then
-    begin
-      PreviewDeal(index);
-    end
-    else if btnSnapshots.Down then
-    begin
-      PreviewSnapshot(index);
-    end;
-
-  end;
-
-end;
-
-procedure TGameFrame.StateListItemDblClick(Sender: TObject);
-begin
-  if actStartLiveMode.Enabled then
-    actStartLiveMode.Execute;
-end;
-
-procedure TGameFrame.StartStateChange(Sender: TObject);
-begin
-  StateList.ItemIndex := -1;
-  if btnNewDeals.Down then
-  begin
-    StateList.ItemCount := fDealGenerator.Count;
-  end
-  else
-  begin
-    StateList.ItemCount := SnapshotLibrary.Count;
-  end;
-end;
-
-procedure TGameFrame.LoadDeal(aDealIndex: Integer; aDeck: TCardStack);
-begin
-  aDeck.Clear;
-  for var cardIndex := Low(TCardOrdinal) to High(TCardOrdinal) do
-    aDeck.Add(fDealGenerator.Deals[aDealIndex].Cards[cardIndex]);
-end;
-
-procedure TGameFrame.LoadDeal(aDealIndex: Integer; aTable: TTable);
-begin
-  var deck := TCardStack.Create;
-  try
-    LoadDeal(aDealIndex, deck);
-    Assert(deck.Count = 52);
-    TDealer.Deal(deck, aTable);
-  finally
-    deck.Free;
-  end;
-end;
-
-procedure TGameFrame.PreviewSnapshot(aIndex: Integer);
-begin
-  var snapshot := TSnapshot.Create;
-  try
-    SnapshotLibrary.LoadSnapshot(aIndex, snapshot);
-    var temp := TTable.Create;
-    try
-      snapshot.Restore(temp);
-      fDisplay.PreviewTable(temp);
-    finally
-      temp.Free;
-    end;
-  finally
-    snapshot.Free;
-  end;
-end;
-
-procedure TGameFrame.PreviewDeal(aIndex: Integer);
-begin
-  var temp := TTable.Create;
-  try
-    LoadDeal(aIndex, temp);
-    fDisplay.PreviewTable(temp);
-  finally
-    temp.Free;
-  end;
-end;
-
-procedure TGameFrame.skTableAnimationDraw(ASender: TObject;
+procedure TTableView.skTableAnimationDraw(ASender: TObject;
   const ACanvas: ISkCanvas; const ADest: TRectF; const AProgress: Double;
   const AOpacity: Single);
 begin
@@ -456,7 +228,7 @@ begin
     fDisplay.Draw(aCanvas, fLayout);
 end;
 
-procedure TGameFrame.DoExecuteMove(aMove: TMove; aImmediate: Boolean);
+procedure TTableView.DoExecuteMove(aMove: TMove; aImmediate: Boolean);
 begin
   // get current table state
   fGame.CopyTableTo(fLocalTable);
@@ -502,17 +274,17 @@ begin
 
 end;
 
-procedure TGameFrame.skTableMouseDown(Sender: TObject; Button: TMouseButton;
+procedure TTableView.skTableMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  if pcControlPages.ActivePage = tsLiveMode then
+  if False then
   begin
     fMouseDownPos := Point(X, Y);
     fMouseIsDown := True;
   end;
 end;
 
-procedure TGameFrame.skTableMouseMove(Sender: TObject; Shift: TShiftState; X,
+procedure TTableView.skTableMouseMove(Sender: TObject; Shift: TShiftState; X,
   Y: Integer);
 begin
   if not fMouseIsDown then
@@ -599,7 +371,7 @@ begin
 
 end;
 
-procedure TGameFrame.skTableMouseUp(Sender: TObject; Button: TMouseButton;
+procedure TTableView.skTableMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
   fDisplay.ClearDropTarget;
@@ -654,7 +426,7 @@ begin
 
 end;
 
-procedure TGameFrame.skTableResize(Sender: TObject);
+procedure TTableView.skTableResize(Sender: TObject);
 begin
   fLayout.SetSize(skTable.ClientWidth, skTable.ClientHeight);
 end;
