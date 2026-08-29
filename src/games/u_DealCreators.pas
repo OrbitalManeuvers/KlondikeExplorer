@@ -3,74 +3,47 @@ unit u_DealCreators;
 interface
 
 uses System.Generics.Collections,
-  u_Types;
+  u_Types, u_Snapshots;
 
 type
-  TSolvability = (svUnknown, svSolvable);
-
   TDealCreator = class
   public
-    class function Description: string; virtual; abstract;
-    class function Solvability: TSolvability; virtual; abstract;
-    class procedure CreateDeal(out Cards: TArray<TCard>); virtual; abstract;
+    class procedure CreateState(aState: TSnapshot); virtual; abstract;
   end;
-
   TDealCreatorClass = class of TDealCreator;
 
-function _DealCreatorRegistry: TList<TDealCreatorClass>;
+  TRandomDealCreator = class(TDealCreator)
+    class procedure CreateState(aState: TSnapshot); override;
+  end;
 
 implementation
 
 uses System.SysUtils,
-  u_Dealers, u_Shufflers, u_CardStacks;
+  u_Dealers, u_Shufflers, u_Tables, u_CardStacks;
 
-type
-  TRandomDealCreator = class(TDealCreator)
-    class function Description: string; override;
-    class function Solvability: TSolvability; override;
-    class procedure CreateDeal(out Cards: TArray<TCard>); override;
-  end;
 
-var
-  _registry: TList<TDealCreatorClass> = nil;
-
-function _DealCreatorRegistry: TList<TDealCreatorClass>;
-begin
-  if _registry = nil then
-    _registry := TList<TDealCreatorClass>.Create;
-  Result := _registry;
-end;
 
 { TRandomDealCreator }
 
-class procedure TRandomDealCreator.CreateDeal(out Cards: TArray<TCard>);
+class procedure TRandomDealCreator.CreateState(aState: TSnapshot);
 begin
   var deck := TCardStack.Create;
   try
     TDealer.PopulateNewDeck(deck);
     TShuffler.Shuffle(deck);
 
-    Cards := deck._Cards.ToArray;
+    var table := TTable.Create;
+    try
+      TDealer.Deal(deck, table);
+      aState.Capture(table);
+    finally
+      table.Free;
+    end;
 
   finally
     deck.Free;
   end;
 end;
 
-class function TRandomDealCreator.Description: string;
-begin
-  Result := 'Random';
-end;
-
-class function TRandomDealCreator.Solvability: TSolvability;
-begin
-  Result := svUnknown;
-end;
-
-initialization
-  _DealCreatorRegistry.Add(TRandomDealCreator);
-
-finalization
-  FreeAndNil(_registry);
 
 end.

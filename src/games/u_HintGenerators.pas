@@ -16,6 +16,11 @@ uses u_Types, u_CardHelpers, u_MoveHelpers, u_MoveGenerators, u_MoveValidators,
 
 { THintGenerator }
 
+// to fix:
+// - foundation to tableau
+//
+
+
 (*
   - hint logic limited to face up cards
 

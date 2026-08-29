@@ -55,7 +55,12 @@ uses
   u_HintGenerators in 'games\u_HintGenerators.pas',
   u_AStarSolvers in 'solvers\u_AStarSolvers.pas',
   u_DealCreators in 'games\u_DealCreators.pas',
-  u_SolvableDealCreators in 'games\u_SolvableDealCreators.pas';
+  u_SolvableDealCreators in 'games\u_SolvableDealCreators.pas',
+  fr_ContentFrames in 'ui\fr_ContentFrames.pas' {ContentFrame: TFrame},
+  fr_ResetFrames in 'ui\fr_ResetFrames.pas' {ResetFrame: TFrame},
+  u_SaveFiles in 'ui\u_SaveFiles.pas',
+  fr_SolutionFrames in 'ui\fr_SolutionFrames.pas' {SolutionFrame: TFrame},
+  u_GraphicButtonBars in 'ui\u_GraphicButtonBars.pas';
 
 {$R *.res}
 

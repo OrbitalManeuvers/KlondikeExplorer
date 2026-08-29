@@ -9,7 +9,8 @@ uses
   System.Types, System.Skia, System.Actions, Vcl.ActnList, PngSpeedButton, Vcl.Skia,
 
   u_Types, u_CardStacks, u_Tables, u_Games, u_TableDisplays, u_GameDisplays,
-  u_Layouts, u_CardResources, u_Snapshots, u_MoveLists, u_AnimationTypes;
+  u_Layouts, u_CardResources, u_Snapshots, u_MoveLists, u_AnimationTypes,
+  u_SnapshotManagers;
 
 type
   TDragInfo = record
@@ -37,6 +38,7 @@ type
     btnSnapshot: TSpeedButton;
     btnRestart: TSpeedButton;
     btnComplete: TSpeedButton;
+    lblHScore: TLabel;
     procedure skTableAnimationDraw(ASender: TObject; const ACanvas: ISkCanvas;
       const ADest: TRectF; const AProgress: Double; const AOpacity: Single);
     procedure skTableMouseDown(Sender: TObject; Button: TMouseButton;
@@ -73,10 +75,13 @@ type
     procedure HandleAnimationComplete(Sender: TObject; const Animation: IAnimation);
     procedure DoExecuteMove(aMove: TMove; aImmediate: Boolean = False);
     procedure SetPreviewMode(const Value: Boolean);
+    procedure UpdateHValue;
+    procedure HandleStateChanged(Sender: TObject);
   public
-    constructor Create(AOwner: TComponent); override;
+    constructor Create(AOwner: TComponent; ASnapshotManager: TSnapshotManager); reintroduce; overload;
     destructor Destroy; override;
 
+    procedure SetInitialState(aSnapshot: TSnapshot);
     property PreviewMode: Boolean read fPreviewMode write SetPreviewMode;
   end;
 
@@ -89,7 +94,7 @@ uses Vcl.Themes, System.Math,
 
   u_Dealers, u_RenderUtils, u_HitTesters, u_MoveHelpers, u_Animations,
   u_HintAnimations, u_DisplayConsts, u_FlybackAnimations, u_MoveAnimations,
-  u_MoveGenerators, u_MoveValidators, u_Utils;
+  u_MoveGenerators, u_MoveValidators, u_Utils, u_Heuristics;
 
 function InDeadZone(MouseDown, MouseUp: TPoint): Boolean;
 const
@@ -101,12 +106,13 @@ end;
 
 { TTableView }
 
-constructor TTableView.Create(AOwner: TComponent);
+constructor TTableView.Create(AOwner: TComponent; ASnapshotManager: TSnapshotManager);
 begin
-  inherited;
+  inherited Create(AOwner);
 
   // lifetime assets
-  fGame := TKlondikeGame.Create;
+  fGame := TKlondikeGame.Create(ASnapshotManager);
+  fGame.OnStateChanged := HandleStateChanged;
   fDisplay := TGameDisplay.Create;
   fDisplay.OnAnimateComplete := HandleAnimationComplete;
   fCardResources := TCardResources.Create;
@@ -145,6 +151,12 @@ begin
   actAutoComplete.Enabled := (not PreviewMode) and fGame.CanAutoComplete;
 
   actSnapshot.Enabled := (not PreviewMode);
+end;
+
+procedure TTableView.UpdateHValue;
+begin
+  var hScore := THeuristic.Score(fGame.Table);
+  lblHScore.Caption := hScore.ToString;
 end;
 
 procedure TTableView.actSnapshotExecute(Sender: TObject);
@@ -211,6 +223,23 @@ begin
   end;
 end;
 
+procedure TTableView.HandleStateChanged(Sender: TObject);
+begin
+  UpdateHValue;
+  UpdateControls;
+end;
+
+procedure TTableView.SetInitialState(aSnapshot: TSnapshot);
+begin
+  aSnapshot.Restore(fLocalTable);
+  fInitialState.Capture(fLocalTable);
+
+  fGame.Initialize(fInitialState);
+  fDisplay.UpdateTable(fLocalTable);
+
+  SetPreviewMode(False);
+end;
+
 procedure TTableView.SetPreviewMode(const Value: Boolean);
 begin
   if Value <> fPreviewMode then
@@ -218,6 +247,7 @@ begin
     fPreviewMode := Value;
     fDisplay.PreviewMode := fPreviewMode;
   end;
+  UpdateControls;
 end;
 
 procedure TTableView.skTableAnimationDraw(ASender: TObject;
@@ -277,7 +307,7 @@ end;
 procedure TTableView.skTableMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  if False then
+  if not fPreviewMode then
   begin
     fMouseDownPos := Point(X, Y);
     fMouseIsDown := True;

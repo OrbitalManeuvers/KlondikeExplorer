@@ -1,10 +1,9 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  OnAlignPosition = FormAlignPosition
   Caption = 'Klondike Explorer'
   ClientHeight = 787
-  ClientWidth = 1150
+  ClientWidth = 1279
   Color = clBlack
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -13,12 +12,32 @@ object MainForm: TMainForm
   Font.Style = []
   StyleElements = [seFont, seBorder]
   OnCreate = FormCreate
-  OnDestroy = FormDestroy
   TextHeight = 17
+  object LeftColumnBorderShape: TShape
+    Left = 329
+    Top = 25
+    Width = 6
+    Height = 743
+    Margins.Left = 0
+    Margins.Top = 6
+    Margins.Bottom = 6
+    Align = alLeft
+    Brush.Color = clBtnShadow
+    Pen.Style = psClear
+    ExplicitLeft = 306
+    ExplicitTop = 31
+    ExplicitHeight = 731
+  end
+  object VSplitter: TSplitter
+    Left = 672
+    Top = 25
+    Width = 6
+    Height = 743
+  end
   object MainMenu: TActionMainMenuBar
     Left = 0
     Top = 0
-    Width = 1150
+    Width = 1279
     Height = 25
     UseSystemFont = False
     ActionManager = MainActions
@@ -33,101 +52,92 @@ object MainForm: TMainForm
     Font.Name = 'Segoe UI'
     Font.Style = []
     Spacing = 0
+    ExplicitWidth = 1150
   end
-  object LeftPanel: TPanel
+  object StatusBar: TStatusBar
+    Left = 0
+    Top = 768
+    Width = 1279
+    Height = 19
+    Panels = <>
+    SimplePanel = True
+    SimpleText = 'Simple text example'
+    ExplicitWidth = 1150
+  end
+  object LeftColumn: TPanel
     AlignWithMargins = True
     Left = 6
     Top = 31
-    Width = 300
-    Height = 750
+    Width = 320
+    Height = 731
     Margins.Left = 6
     Margins.Top = 6
-    Margins.Right = 6
     Margins.Bottom = 6
     Align = alLeft
-    ParentBackground = False
-    ShowCaption = False
-    TabOrder = 1
-    object GroupBox1: TGroupBox
-      AlignWithMargins = True
-      Left = 5
-      Top = 4
-      Width = 290
-      Height = 145
-      Margins.Left = 4
-      Margins.Right = 4
-      Align = alTop
-      Caption = ' Reset '
-      TabOrder = 0
-      object btnReset: TSpeedButton
-        Left = 16
-        Top = 104
-        Width = 81
-        Height = 33
-        Caption = 'Reset'
-        OnClick = btnResetClick
-      end
-      object rbRandom: TRadioButton
-        Left = 16
-        Top = 24
-        Width = 113
-        Height = 17
-        Caption = 'Random'
-        TabOrder = 0
-      end
-      object rbSolvable: TRadioButton
-        Left = 16
-        Top = 48
-        Width = 113
-        Height = 17
-        Caption = 'Solvable'
-        TabOrder = 1
-      end
-      object rbSnapshot: TRadioButton
-        Left = 16
-        Top = 72
-        Width = 81
-        Height = 17
-        Caption = 'Snapshot:'
-        TabOrder = 2
-      end
-      object cbSnapshots: TComboBox
-        Left = 104
-        Top = 68
-        Width = 172
-        Height = 25
-        Style = csDropDownList
-        TabOrder = 3
-      end
-    end
-  end
-  object TablePanel: TPanel
-    Left = 318
-    Top = 46
-    Width = 815
-    Height = 347
-    Margins.Left = 6
-    Margins.Top = 0
-    Margins.Right = 6
-    Margins.Bottom = 6
-    Align = alCustom
+    BevelOuter = bvNone
+    Padding.Left = 4
+    Padding.Top = 4
+    Padding.Right = 4
+    Padding.Bottom = 4
     ParentBackground = False
     ShowCaption = False
     TabOrder = 2
+    object LeftColumnSplitShape: TShape
+      Left = 40
+      Top = 48
+      Width = 65
+      Height = 6
+      Brush.Color = clBtnShadow
+      Pen.Style = psClear
+    end
   end
-  object GraphPanel: TPanel
-    Left = 384
-    Top = 416
-    Width = 693
-    Height = 183
-    Margins.Left = 6
-    Margins.Top = 0
-    Margins.Right = 6
+  object CenterColumn: TPanel
+    AlignWithMargins = True
+    Left = 338
+    Top = 31
+    Width = 331
+    Height = 731
+    Margins.Top = 6
     Margins.Bottom = 6
-    Align = alCustom
+    Align = alLeft
+    BevelOuter = bvNone
+    Padding.Left = 4
+    Padding.Top = 4
+    Padding.Right = 4
+    Padding.Bottom = 4
     ParentBackground = False
     ShowCaption = False
     TabOrder = 3
+    ExplicitLeft = 318
+  end
+  object RightColumn: TPanel
+    AlignWithMargins = True
+    Left = 681
+    Top = 31
+    Width = 592
+    Height = 731
+    Margins.Top = 6
+    Margins.Right = 6
+    Margins.Bottom = 6
+    Align = alClient
+    BevelOuter = bvNone
+    Padding.Left = 4
+    Padding.Top = 4
+    Padding.Right = 4
+    Padding.Bottom = 4
+    ParentBackground = False
+    ShowCaption = False
+    TabOrder = 4
+    ExplicitLeft = 676
+    ExplicitTop = 28
+    object RightColumnSplitShape: TShape
+      Left = 48
+      Top = 56
+      Width = 65
+      Height = 6
+      Brush.Color = clBtnShadow
+      Pen.Style = psClear
+    end
   end
   object MainActions: TActionManager
     ActionBars = <
@@ -224,6 +234,12 @@ object MainForm: TMainForm
       Category = 'Help'
       Caption = 'About...'
       OnExecute = actAboutExecute
+    end
+    object actNewGame: TAction
+      Category = 'File'
+      Caption = 'New Game'
+      ShortCut = 16462
+      OnExecute = actNewGameExecute
     end
   end
 end

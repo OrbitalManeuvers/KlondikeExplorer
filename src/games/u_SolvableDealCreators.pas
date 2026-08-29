@@ -2,65 +2,43 @@ unit u_SolvableDealCreators;
 
 interface
 
-uses u_Types, u_DealCreators;
+uses u_Types, u_DealCreators, u_Snapshots;
 
 type
   TForwardDealCreator = class(TDealCreator)
   public
-    class function Description: string; override;
-    class function Solvability: TSolvability; override;
-    class procedure CreateDeal(out Cards: TArray<TCard>); override;
+    class procedure CreateState(aState: TSnapshot); override;
   end;
 
   TReverseDealCreator = class(TDealCreator)
   public
-    class function Description: string; override;
-    class function Solvability: TSolvability; override;
-    class procedure CreateDeal(out Cards: TArray<TCard>); override;
+    class procedure CreateState(aState: TSnapshot); override;
   end;
 
 implementation
 
+uses u_BasicSolvers;
+
 const
   MAX_ATTEMPTS = 10; // don't keep trying forever if something is wrong
 
+
 { TForwardDealCreator }
-
-class procedure TForwardDealCreator.CreateDeal(out Cards: TArray<TCard>);
+class procedure TForwardDealCreator.CreateState(aState: TSnapshot);
 begin
-(*
-  - loop over MAX_ATTEMPTS
-  - TCardStack -> TDealer -> TShuffler
-  - send to TBasicSolver
-*)
-end;
 
-class function TForwardDealCreator.Description: string;
-begin
-  Result := 'ForwardSolver';
-end;
-
-class function TForwardDealCreator.Solvability: TSolvability;
-begin
-  Result := svSolvable;
-end;
-
-{ TReverseDealCreator }
-
-class procedure TReverseDealCreator.CreateDeal(out Cards: TArray<TCard>);
-begin
   //
 
+
 end;
 
-class function TReverseDealCreator.Description: string;
-begin
-  Result := 'Unsolver';
-end;
 
-class function TReverseDealCreator.Solvability: TSolvability;
+{ TReverseDealCreator }
+class procedure TReverseDealCreator.CreateState(aState: TSnapshot);
 begin
-  Result := svSolvable;
+
+///
+
 end;
 
 end.

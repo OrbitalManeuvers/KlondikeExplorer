@@ -29,8 +29,8 @@ uses System.UITypes, Vcl.GraphUtil,
   u_DisplayConsts;
 
 const
-  FONT_NAME = 'Arial';
-//  FONT_NAME = 'Segoe UI';
+//  FONT_NAME = 'Arial';
+  FONT_NAME = 'Segoe UI';
   FONT_SIZE = 100.0; // large size for good path precision
 
   SUIT_CHARS: array[TCardSuit] of Char = (

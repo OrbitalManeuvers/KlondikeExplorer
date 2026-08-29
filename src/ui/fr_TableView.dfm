@@ -85,6 +85,18 @@ object TableView: TTableView
       Height = 25
       Action = actAutoComplete
     end
+    object lblHScore: TLabel
+      AlignWithMargins = True
+      Left = 628
+      Top = 3
+      Width = 4
+      Height = 35
+      Margins.Right = 8
+      Align = alRight
+      Layout = tlCenter
+      ExplicitLeft = 615
+      ExplicitHeight = 17
+    end
   end
   object GameActions: TActionList
     Left = 48

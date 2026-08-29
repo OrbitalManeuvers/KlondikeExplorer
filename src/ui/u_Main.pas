@@ -8,44 +8,46 @@ uses
   Vcl.StdActns, Vcl.PlatformDefaultStyleActnCtrls, Vcl.ActnMan, Vcl.ToolWin,
   Vcl.ActnCtrls, Vcl.ActnMenus, Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.Buttons, Vcl.StdCtrls,
 
-  u_SnapshotLibraries, fr_TableView;
+  u_SnapshotLibraries, u_SnapshotManagers, fr_TableView, Vcl.AppEvnts, Vcl.Tabs,
+  fr_ContentFrames, fr_ResetFrames, fr_SolutionFrames,
+  u_SaveFiles;
 
 type
   TMainForm = class(TForm)
     MainMenu: TActionMainMenuBar;
     MainActions: TActionManager;
     actFileExit: TFileExit;
-    LeftPanel: TPanel;
-    TablePanel: TPanel;
-    GraphPanel: TPanel;
-    GroupBox1: TGroupBox;
-    rbRandom: TRadioButton;
-    rbSolvable: TRadioButton;
-    rbSnapshot: TRadioButton;
-    cbSnapshots: TComboBox;
-    btnReset: TSpeedButton;
     actOpenGame: TFileOpen;
     actSaveGameAs: TFileSaveAs;
     actSaveGame: TAction;
     actTests: TAction;
     actAbout: TAction;
-    procedure FormCreate(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
-    procedure FormAlignPosition(Sender: TWinControl; Control: TControl;
-      var NewLeft, NewTop, NewWidth, NewHeight: Integer; var AlignRect: TRect;
-      AlignInfo: TAlignInfo);
-    procedure btnResetClick(Sender: TObject);
+    StatusBar: TStatusBar;
+    actNewGame: TAction;
+    LeftColumn: TPanel;
+    LeftColumnSplitShape: TShape;
+    LeftColumnBorderShape: TShape;
+    CenterColumn: TPanel;
+    VSplitter: TSplitter;
+    RightColumn: TPanel;
+    RightColumnSplitShape: TShape;
     procedure actOpenGameAccept(Sender: TObject);
     procedure actSaveGameAsAccept(Sender: TObject);
     procedure actSaveGameExecute(Sender: TObject);
     procedure actTestsExecute(Sender: TObject);
     procedure actAboutExecute(Sender: TObject);
+    procedure actNewGameExecute(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   private
+    SaveFile: TSaveFile;
+    SnapshotManager: TSnapshotManager;
     SnapshotLibrary: TSnapshotLibrary;
-    TableView: TTableView;
     function SnapshotLibraryFileName(): string;
     procedure UpdateControls;
+    procedure HandleSnapshotManagerChange(Sender: TObject);
   public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
   end;
 
 var
@@ -55,8 +57,8 @@ implementation
 
 {$R *.dfm}
 
-uses System.IOUtils,
-  u_SnapshotManagers;
+uses System.IOUtils, Vcl.Themes,
+  u_Snapshots, u_DealCreators;
 
 const
   PANEL_MARGIN = 6;
@@ -69,26 +71,51 @@ begin
 end;
 
 { TMainForm }
-procedure TMainForm.FormCreate(Sender: TObject);
+constructor TMainForm.Create(AOwner: TComponent);
 begin
+  inherited;
+  SnapshotManager := TSnapshotManager.Create;
+  SnapshotManager.OnChange := HandleSnapshotManagerChange;
+
   SnapshotLibrary := TSnapshotLibrary.Create;
   var fileName := SnapshotLibraryFileName();
   if TFile.Exists(fileName) then
     SnapshotLibrary.LoadFromFile(fileName);
 
-  TableView := TTableView.Create(Self);
-  TableView.Align := alClient;
-  TableView.Parent := TablePanel;
+  // update the status bar
+  HandleSnapshotManagerChange(nil);
 
+  SaveFile := TSaveFile.Create;
 end;
 
-procedure TMainForm.FormDestroy(Sender: TObject);
+destructor TMainForm.Destroy;
 begin
+  SnapshotManager.OnChange := nil;
+
   if SnapshotLibrary.Modified then
   begin
     var fileName := SnapshotLibraryFileName();
     SnapshotLibrary.SaveToFile(fileName);
   end;
+  SnapshotLibrary.Free;
+
+  //
+  if SaveFile.Modified then
+  begin
+    //
+  end;
+
+  // let inherited do all child cleanup
+  inherited;
+
+  // shared resources go last
+  SnapshotManager.Free;
+end;
+
+procedure TMainForm.HandleSnapshotManagerChange(Sender: TObject);
+begin
+  if Assigned(SnapshotManager) then
+    StatusBar.SimpleText := SnapshotManager.Storage.Stats.AsText;
 end;
 
 function TMainForm.SnapshotLibraryFileName: string;
@@ -98,11 +125,15 @@ end;
 
 procedure TMainForm.UpdateControls;
 begin
-
-  cbSnapshots.Enabled := rbSnapshot.Checked;
+ //
 end;
 
 procedure TMainForm.actAboutExecute(Sender: TObject);
+begin
+  //
+end;
+
+procedure TMainForm.actNewGameExecute(Sender: TObject);
 begin
   //
 end;
@@ -127,37 +158,26 @@ begin
   //
 end;
 
-procedure TMainForm.btnResetClick(Sender: TObject);
+procedure TMainForm.FormCreate(Sender: TObject);
 begin
-  //
-end;
+  var rf := TResetFrame.Create(Self, SnapshotManager, SnapshotLibrary);
+  rf.Align := alTop;
+  rf.Parent := LeftColumn;
+  rf.InitContent;
 
-procedure TMainForm.FormAlignPosition(Sender: TWinControl; Control: TControl;
-  var NewLeft, NewTop, NewWidth, NewHeight: Integer; var AlignRect: TRect;
-  AlignInfo: TAlignInfo);
-begin
-  if (Control = TablePanel) or (Control = GraphPanel) then
-  begin
-    var r := ClientRect;
-    r.Left := LeftPanel.BoundsRect.Right + PANEL_MARGIN;
-    r.Top := LeftPanel.Top;
-    r.Bottom := LeftPanel.BoundsRect.Bottom;
-    r.Right := r.Right - 6;
+  LeftColumnSplitShape.Align := alTop;
+  LeftColumnSplitShape.Brush.Color := StyleServices.GetSystemColor(clBtnShadow);
+  LeftColumnBorderShape.Brush.Color := StyleServices.GetSystemColor(clBtnShadow);
+  LeftColumnBorderShape.Brush.Color := StyleServices.GetSystemColor(clBtnShadow);
 
-    if Control = TablePanel then
-    begin
-      r.Bottom := GraphPanel.Top - PANEL_MARGIN;
-    end
-    else if Control = GraphPanel then
-    begin
-      r.Top := r.Bottom - GraphPanel.Height;
-    end;
+  RightColumnSplitShape.Brush.Color := StyleServices.GetSystemColor(clBtnShadow);
 
-    NewLeft := r.Left;
-    NewTop := r.Top;
-    NewWidth := r.Width;
-    NewHeight := r.Height;
-  end;
+  var sf := TSolutionFrame.Create(Self, SnapshotManager, SnapshotLibrary);
+  sf.Align := alClient;
+  sf.Parent := LeftColumn;
+  sf.InitContent;
+
+
 end;
 
 end.

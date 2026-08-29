@@ -2,12 +2,12 @@ unit u_Games;
 
 interface
 
-uses System.Generics.Collections,
+uses System.Classes, System.Generics.Collections,
   u_Types, u_CardStacks, u_Tables, u_Snapshots, u_MoveLists,
   u_SnapshotTypes, u_SnapshotManagers;
 
 type
-  TUndoEntry = record
+  TGameMove = record
     Token: TSnapshotToken;
     Move: TMove;
   end;
@@ -16,15 +16,19 @@ type
   private
     fTable: TTable;
     fSnapshotManager: TSnapshotManager;
+    fOwnsSnapshotManager: Boolean;
     fSnapshot: TSnapshot;
     fInitialState: TSnapshotToken;
-    fUndoStack: TStack<TUndoEntry>;
-    fRedoStack: TStack<TUndoEntry>;
+    fMoveHistory: TList<TGameMove>;
+    fHistoryIndex: Integer;
     fHintMoves: TMoveList;
     fHintIndex: Integer;
-    fMoveCount: Integer;
+    fOnStateChanged: TNotifyEvent;
+    function GetMoveHistory(aIndex: Integer): TGameMove;
+    function GetMoveCount: Integer;
+    procedure StateChanged;
   public
-    constructor Create;
+    constructor Create(ASnapshotManager: TSnapshotManager = nil);
     destructor Destroy; override;
     procedure Initialize(aInitialState: TSnapshot);
 
@@ -51,11 +55,13 @@ type
     procedure CopyTableTo(aTarget: TTable);
 
     property Table: TTable read fTable;
-    property MoveCount: Integer read fMoveCount;
+    property MoveCount: Integer read GetMoveCount;
+    property MoveHistory[aIndex: Integer]: TGameMove read GetMoveHistory;
 
+    property OnStateChanged: TNotifyEvent read fOnStateChanged write fOnStateChanged;
   end;
 
-function NewUndoEntry(const aToken: TSnapshotToken; const aMove: TMove): TUndoEntry;
+function NewGameMove(const aToken: TSnapshotToken; const aMove: TMove): TGameMove;
 
 implementation
 
@@ -63,23 +69,42 @@ uses System.Math,
   u_CardHelpers, u_Utils, u_Dealers, u_MoveValidators, u_MoveExecutors,
   u_TableUtils, u_MoveGenerators, u_HintGenerators;
 
-function NewUndoEntry(const aToken: TSnapshotToken; const aMove: TMove): TUndoEntry;
+function NewGameMove(const aToken: TSnapshotToken; const aMove: TMove): TGameMove;
 begin
   Result.Token := aToken;
   Result.Move := aMove;
 end;
 
-{ TKlondikeGame }
-constructor TKlondikeGame.Create;
+function TKlondikeGame.GetMoveHistory(aIndex: Integer): TGameMove;
 begin
-  inherited;
+  Result := fMoveHistory[aIndex];
+end;
+
+function TKlondikeGame.GetMoveCount: Integer;
+begin
+  Result := fHistoryIndex + 1;
+end;
+
+{ TKlondikeGame }
+constructor TKlondikeGame.Create(ASnapshotManager: TSnapshotManager = nil);
+begin
+  inherited Create;
   fTable := TTable.Create;
-  fSnapshotManager := TSnapshotManager.Create;
+  if ASnapshotManager <> nil then
+  begin
+    fSnapshotManager := ASnapshotManager;
+    fOwnsSnapshotManager := False;
+  end
+  else
+  begin
+    fSnapshotManager := TSnapshotManager.Create;
+    fOwnsSnapshotManager := True;
+  end;
   fSnapshot := TSnapshot.Create;
   fInitialState := NO_SNAPSHOT;
 
-  fUndoStack := TStack<TUndoEntry>.Create;
-  fRedoStack := TStack<TUndoEntry>.Create;
+  fMoveHistory := TList<TGameMove>.Create;
+  fHistoryIndex := -1;
 
   fHintMoves := TMoveList.Create();
 end;
@@ -87,14 +112,19 @@ end;
 destructor TKlondikeGame.Destroy;
 begin
   fHintMoves.Free;
-  fUndoStack.Free;
-  fRedoStack.Free;
+
+  // free all snapshot tokens held in history
+  for var i := 0 to fMoveHistory.Count - 1 do
+    fSnapshotManager.Delete(fMoveHistory[i].Token);
+  fMoveHistory.Free;
 
   fSnapshot.Free;
 
   if fInitialState <> NO_SNAPSHOT then
     fSnapshotManager.Delete(fInitialState);
-  fSnapshotManager.Free;
+
+  if fOwnsSnapshotManager then
+    fSnapshotManager.Free;
 
   fTable.Free;
   inherited;
@@ -107,7 +137,6 @@ begin
   fInitialState := fSnapshotManager.Save(aInitialState);
 
   Restart;
-  BuildHintList;
 end;
 
 function TKlondikeGame.TryExecuteMove(const aMove: TMove): Boolean;
@@ -115,21 +144,65 @@ begin
   Result := False;
   if TMoveValidator.IsValidMove(aMove, fTable) then
   begin
-    // capture undo state
+    // capture pre-move state
     fSnapshot.Capture(fTable);
     var token := fSnapshotManager.Save(fSnapshot);
-    fUndoStack.Push(NewUndoEntry(token, aMove));
 
-    // new move invalidates redo history
-    fRedoStack.Clear;
+    // truncate any redo entries beyond current position
+    for var i := fMoveHistory.Count - 1 downto fHistoryIndex + 1 do
+    begin
+      fSnapshotManager.Delete(fMoveHistory[i].Token);
+      fMoveHistory.Delete(i);
+    end;
+
+    // append new entry
+    fMoveHistory.Add(NewGameMove(token, aMove));
+    Inc(fHistoryIndex);
 
     // apply move
     TMoveExecutor.ExecuteMove(fTable, aMove);
-    Inc(fMoveCount);
     Result := True;
 
-    BuildHintList;
+    StateChanged;
   end;
+end;
+
+procedure TKlondikeGame.Undo;
+begin
+  if CanUndo then
+  begin
+    // restore state stored at current history index
+    var entry := fMoveHistory[fHistoryIndex];
+    fSnapshotManager.Load(entry.Token, fSnapshot);
+    fSnapshot.Restore(fTable);
+
+    Dec(fHistoryIndex);
+
+    StateChanged;
+  end;
+end;
+
+procedure TKlondikeGame.Redo;
+begin
+  if CanRedo then
+  begin
+    // advance index, then re-execute that move
+    Inc(fHistoryIndex);
+    var entry := fMoveHistory[fHistoryIndex];
+    TMoveExecutor.ExecuteMove(fTable, entry.Move);
+
+    StateChanged;
+  end;
+end;
+
+function TKlondikeGame.CanUndo: Boolean;
+begin
+  Result := fHistoryIndex >= 0;
+end;
+
+function TKlondikeGame.CanRedo: Boolean;
+begin
+  Result := fHistoryIndex < fMoveHistory.Count - 1;
 end;
 
 procedure TKlondikeGame.BuildHintList;
@@ -161,16 +234,6 @@ end;
 function TKlondikeGame.CanAutoComplete: Boolean;
 begin
   Result := (fTable.Stock.Count = 0) and (fTable.Waste.Count = 0);
-end;
-
-function TKlondikeGame.CanRedo: Boolean;
-begin
-  Result := not fRedoStack.IsEmpty;
-end;
-
-function TKlondikeGame.CanUndo: Boolean;
-begin
-  Result := not fUndoStack.IsEmpty;
 end;
 
 procedure TKlondikeGame.CopyTableTo(aTarget: TTable);
@@ -261,7 +324,7 @@ begin
         begin
           aMove.Source := aSourceStack;
           aMove.Target := target;
-          aMove.Count := fTable.Stacks[aSourceStack].Count - aCardIndex; // !! verify
+          aMove.Count := fTable.Stacks[aSourceStack].Count - aCardIndex;
           Exit(True);
         end;
       end;
@@ -290,48 +353,11 @@ end;
 function TKlondikeGame.IsWon: Boolean;
 begin
   for var suit := Low(TCardSuit) to High(TCardSuit) do
-    if (not fTable.Foundation[suit].HasCards) or (fTable.Foundation[suit].Last.Value <> cvKing) then
+    if (not fTable.Foundation[suit].HasCards)
+      or (fTable.Foundation[suit].Last.Value <> cvKing) then
       Exit(False);
 
   Result := True;
-end;
-
-procedure TKlondikeGame.Redo;
-begin
-  if CanRedo then
-  begin
-    // capture current state for undo
-    fSnapshot.Capture(fTable);
-    var undoToken := fSnapshotManager.Save(fSnapshot);
-
-    var entry := fRedoStack.Pop;
-    fUndoStack.Push(NewUndoEntry(undoToken, entry.Move));
-
-    // restore forward state
-    fSnapshotManager.Load(entry.Token, fSnapshot);
-    fSnapshot.Restore(fTable);
-
-    Inc(fMoveCount);
-  end;
-end;
-
-procedure TKlondikeGame.Undo;
-begin
-  if CanUndo then
-  begin
-    // capture current state for redo
-    fSnapshot.Capture(fTable);
-    var redoToken := fSnapshotManager.Save(fSnapshot);
-
-    var entry := fUndoStack.Pop;
-    fRedoStack.Push(NewUndoEntry(redoToken, entry.Move));
-
-    // restore previous state
-    fSnapshotManager.Load(entry.Token, fSnapshot);
-    fSnapshot.Restore(fTable);
-
-    Dec(fMoveCount);
-  end;
 end;
 
 procedure TKlondikeGame.ResetHints;
@@ -346,15 +372,10 @@ begin
 
   ResetHints;
 
-  for var ue in fUndoStack do
-    fSnapshotManager.Delete(ue.Token);
-  fUndoStack.Clear;
-
-  for var re in fRedoStack do
-    fSnapshotManager.Delete(re.Token);
-  fRedoStack.Clear;
-
-  fMoveCount := 0;
+  for var i := 0 to fMoveHistory.Count - 1 do
+    fSnapshotManager.Delete(fMoveHistory[i].Token);
+  fMoveHistory.Clear;
+  fHistoryIndex := -1;
 
   fTable.BeginUpdate;
   try
@@ -365,6 +386,15 @@ begin
   finally
     fTable.EndUpdate;
   end;
+
+  StateChanged;
+end;
+
+procedure TKlondikeGame.StateChanged;
+begin
+  BuildHintList;
+  if Assigned(fOnStateChanged) then
+    fOnStateChanged(Self);
 end;
 
 end.

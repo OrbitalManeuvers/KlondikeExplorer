@@ -13,7 +13,9 @@ uses
 type
   TSnapshotManager = class
   private
+    fOnChange: TNotifyEvent;
     fStorage: TSnapshotStorage;
+    procedure Change;
   public
     constructor Create;
     destructor Destroy; override;
@@ -24,6 +26,7 @@ type
     procedure Delete(aToken: TSnapshotToken);
 
     property Storage: TSnapshotStorage read fStorage;
+    property OnChange: TNotifyEvent read fOnChange write fOnChange;
   end;
 
 implementation
@@ -43,14 +46,22 @@ begin
   inherited;
 end;
 
+procedure TSnapshotManager.Change;
+begin
+  if Assigned(fOnChange) then
+    fOnChange(Self);
+end;
+
 procedure TSnapshotManager.Clear;
 begin
   fStorage.Clear;
+  Change;
 end;
 
 procedure TSnapshotManager.Delete(aToken: TSnapshotToken);
 begin
   fStorage.ReleaseMem(aToken);
+  Change;
 end;
 
 function TSnapshotManager.Save(aSnapshot: TSnapshot): TSnapshotToken;
@@ -67,6 +78,7 @@ begin
   Move(aSnapshot.Buffer^, P^, SNAPSHOT_BUFFER_SIZE);
 
   Result := memToken;
+  Change;
 end;
 
 procedure TSnapshotManager.Load(aToken: TSnapshotToken; aSnapshot: TSnapshot);
@@ -75,6 +87,7 @@ var
 begin
   P := fStorage.BufferOf(aToken);
   Move(P^, aSnapshot.Buffer^, SNAPSHOT_BUFFER_SIZE);
+  Change;
 end;
 
 

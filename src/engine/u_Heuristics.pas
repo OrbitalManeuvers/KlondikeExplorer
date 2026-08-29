@@ -59,6 +59,9 @@ begin
   end;
 
   Result := Result + faceDown + buriedAceDepth;
+
+  // cards trapped in the stock/waste cycle are harder to access than tableau cards
+  Result := Result + (Table.Stock.Count + Table.Waste.Count) * 0.5;
 end;
 
 end.
