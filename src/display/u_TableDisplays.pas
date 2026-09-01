@@ -85,79 +85,70 @@ begin
     aCanvas.DrawRect(RectF(0, 0, maxX, maxY), frame);
   end;
 
-  if fPreviewMode then
-    aCanvas.SaveLayerAlpha(PREVIEW_ALPHA);
-  try
-
-    // draw foundation cards
-    for var stackId := siFoundation1 to siFoundation4 do
+  // draw foundation cards
+  for var stackId := siFoundation1 to siFoundation4 do
+  begin
+    var r := aLayout.CardRect(aLayout.Origins[stackId]);
+    if Table.Stacks[stackId].HasCards then
     begin
-      var r := aLayout.CardRect(aLayout.Origins[stackId]);
-      if Table.Stacks[stackId].HasCards then
-      begin
-        var c := Table.Stacks[stackId].Last;
-        TRenderUtils.DrawCard(aCanvas, c, r, True);
-      end
-      else
-      begin
-        if not fPreviewMode then
-          TRenderUtils.DrawEmptySuitSlot(aCanvas, r, StackIdToSuit(stackId));
-        end;
+      var c := Table.Stacks[stackId].Last;
+      TRenderUtils.DrawCard(aCanvas, c, r, True);
+    end
+    else
+    begin
+      if not fPreviewMode then
+        TRenderUtils.DrawEmptySuitSlot(aCanvas, r, StackIdToSuit(stackId));
+      end;
+  end;
+
+  // draw waste cards (up to 3 visible, fanned right)
+  if Table.Waste.HasCards then
+  begin
+    var visibleCount := Min(3, Table.Waste.Count);
+    var startIndex := Table.Waste.Count - visibleCount;
+    for var I := 0 to visibleCount - 1 do
+    begin
+      var origin := aLayout.Origins[siWaste];
+      origin.Offset(aLayout.WasteCardX(I), 0);
+      var r := aLayout.CardRect(origin);
+      var c := Table.Waste.Cards[startIndex + I];
+      TRenderUtils.DrawCard(aCanvas, c, r, True);
     end;
+  end;
 
-    // draw waste cards (up to 3 visible, fanned right)
-    if Table.Waste.HasCards then
+  // draw stock
+  begin
+    var r := aLayout.CardRect(aLayout.Origins[siStock]);
+    if Table.Stock.HasCards then
+      TRenderUtils.DrawCardBack(aCanvas, r)
+    else
     begin
-      var visibleCount := Min(3, Table.Waste.Count);
-      var startIndex := Table.Waste.Count - visibleCount;
-      for var I := 0 to visibleCount - 1 do
+      if Table.Waste.HasCards and (not fPreviewMode) then
+        TRenderUtils.DrawCardHighlight(aCanvas, r, TAlphaColors.Coral, fStockPulse.Value)
+      else if not fPreviewMode then
+        TRenderUtils.DrawEmptySlot(aCanvas, r);
+    end;
+  end;
+
+  // draw tableaus
+  for var stackId := siTableau1 to siTableau7 do
+  begin
+    var r := aLayout.CardRect(aLayout.Origins[stackId]);
+    if Table.Stacks[stackId].IsEmpty then
+    begin
+      if not PreviewMode then
+        TRenderUtils.DrawEmptySlot(aCanvas, r);
+    end
+    else
+    begin
+      for var cardIndex := 0 to Table.Stacks[stackId].Count - 1 do
       begin
-        var origin := aLayout.Origins[siWaste];
-        origin.Offset(aLayout.WasteCardX(I), 0);
-        var r := aLayout.CardRect(origin);
-        var c := Table.Waste.Cards[startIndex + I];
-        TRenderUtils.DrawCard(aCanvas, c, r, True);
+        var c := Table.Stacks[stackId].Cards[cardIndex];
+        var isFaceUp := cardIndex >= Table.Stacks[stackId].Count - Table.Stacks[stackId].FaceUpCount;
+        TRenderUtils.DrawCard(aCanvas, c, r, isFaceUp);
+        r.Offset(0, aLayout.StackOffset);
       end;
     end;
-
-    // draw stock
-    begin
-      var r := aLayout.CardRect(aLayout.Origins[siStock]);
-      if Table.Stock.HasCards then
-        TRenderUtils.DrawCardBack(aCanvas, r)
-      else
-      begin
-        if Table.Waste.HasCards and (not fPreviewMode) then
-          TRenderUtils.DrawCardHighlight(aCanvas, r, TAlphaColors.Coral, fStockPulse.Value)
-        else if not fPreviewMode then
-          TRenderUtils.DrawEmptySlot(aCanvas, r);
-      end;
-    end;
-
-    // draw tableaus
-    for var stackId := siTableau1 to siTableau7 do
-    begin
-      var r := aLayout.CardRect(aLayout.Origins[stackId]);
-      if Table.Stacks[stackId].IsEmpty then
-      begin
-        if not PreviewMode then
-          TRenderUtils.DrawEmptySlot(aCanvas, r);
-      end
-      else
-      begin
-        for var cardIndex := 0 to Table.Stacks[stackId].Count - 1 do
-        begin
-          var c := Table.Stacks[stackId].Cards[cardIndex];
-          var isFaceUp := cardIndex >= Table.Stacks[stackId].Count - Table.Stacks[stackId].FaceUpCount;
-          TRenderUtils.DrawCard(aCanvas, c, r, isFaceUp);
-          r.Offset(0, aLayout.StackOffset);
-        end;
-      end;
-    end;
-
-  finally
-    if fPreviewMode then
-      aCanvas.Restore;
   end;
 
 end;

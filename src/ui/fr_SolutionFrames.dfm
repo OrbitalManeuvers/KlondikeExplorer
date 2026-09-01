@@ -6,6 +6,9 @@ inherited SolutionFrame: TSolutionFrame
   inherited pnlBackground: TPanel
     Width = 313
     Height = 519
+    ExplicitTop = 0
+    ExplicitWidth = 313
+    ExplicitHeight = 519
     object lblTitle: TLabel
       Left = 16
       Top = 8
@@ -19,29 +22,58 @@ inherited SolutionFrame: TSolutionFrame
       Font.Style = [fsBold]
       ParentFont = False
     end
-    object Placeholder: TShape
-      Left = 8
-      Top = 31
-      Width = 297
-      Height = 34
-      Brush.Color = clBlack
+    object btnPlayer: TSpeedButton
+      Left = 14
+      Top = 30
+      Width = 72
+      Height = 30
+      GroupIndex = 1
+      Caption = 'Player'
+      OnClick = SolutionTypeClick
+    end
+    object btnDFS: TSpeedButton
+      Left = 84
+      Top = 30
+      Width = 72
+      Height = 30
+      GroupIndex = 1
+      Caption = 'DFS'
+      OnClick = SolutionTypeClick
+    end
+    object btnBeam: TSpeedButton
+      Left = 154
+      Top = 30
+      Width = 72
+      Height = 30
+      GroupIndex = 1
+      Caption = 'Beam'
+      OnClick = SolutionTypeClick
+    end
+    object btnAStar: TSpeedButton
+      Left = 224
+      Top = 30
+      Width = 72
+      Height = 30
+      GroupIndex = 1
+      Caption = 'A*'
+      OnClick = SolutionTypeClick
     end
     object pcSolutionPages: TPageControl
       Left = 8
-      Top = 67
+      Top = 59
       Width = 297
-      Height = 446
+      Height = 454
       ActivePage = tsPlayer
       Anchors = [akLeft, akTop, akBottom]
       TabOrder = 0
       object tsPlayer: TTabSheet
         Caption = 'tsPlayer'
         TabVisible = False
-        object ControlList1: TControlList
+        object PlayerMoveList: TControlList
           Left = 0
           Top = 0
           Width = 289
-          Height = 436
+          Height = 444
           Align = alClient
           ItemMargins.Left = 0
           ItemMargins.Top = 0
@@ -49,10 +81,7 @@ inherited SolutionFrame: TSolutionFrame
           ItemMargins.Bottom = 0
           ParentColor = False
           TabOrder = 0
-          ExplicitLeft = 56
-          ExplicitTop = 72
-          ExplicitWidth = 200
-          ExplicitHeight = 200
+          ExplicitHeight = 436
         end
       end
       object tsSolver: TTabSheet

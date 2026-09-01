@@ -11,7 +11,10 @@ object MainForm: TMainForm
   Font.Name = 'Segoe UI'
   Font.Style = []
   StyleElements = [seFont, seBorder]
+  OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   TextHeight = 17
   object LeftColumnBorderShape: TShape
     Left = 329
@@ -33,6 +36,7 @@ object MainForm: TMainForm
     Top = 25
     Width = 6
     Height = 743
+    ResizeStyle = rsUpdate
   end
   object MainMenu: TActionMainMenuBar
     Left = 0
@@ -52,7 +56,6 @@ object MainForm: TMainForm
     Font.Name = 'Segoe UI'
     Font.Style = []
     Spacing = 0
-    ExplicitWidth = 1150
   end
   object StatusBar: TStatusBar
     Left = 0
@@ -62,7 +65,6 @@ object MainForm: TMainForm
     Panels = <>
     SimplePanel = True
     SimpleText = 'Simple text example'
-    ExplicitWidth = 1150
   end
   object LeftColumn: TPanel
     AlignWithMargins = True
@@ -108,7 +110,17 @@ object MainForm: TMainForm
     ParentBackground = False
     ShowCaption = False
     TabOrder = 3
-    ExplicitLeft = 318
+    object HSplitter: TSplitter
+      Left = 4
+      Top = 4
+      Width = 323
+      Height = 8
+      Cursor = crVSplit
+      Align = alTop
+      Color = clBlack
+      ParentColor = False
+      ResizeStyle = rsUpdate
+    end
   end
   object RightColumn: TPanel
     AlignWithMargins = True
@@ -128,8 +140,6 @@ object MainForm: TMainForm
     ParentBackground = False
     ShowCaption = False
     TabOrder = 4
-    ExplicitLeft = 676
-    ExplicitTop = 28
     object RightColumnSplitShape: TShape
       Left = 48
       Top = 56

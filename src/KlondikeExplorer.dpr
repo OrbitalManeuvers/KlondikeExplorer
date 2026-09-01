@@ -5,7 +5,6 @@ uses
   u_Main in 'ui\u_Main.pas' {MainForm},
   Vcl.Themes,
   Vcl.Styles,
-  fr_TableView in 'ui\fr_TableView.pas' {TableView: TFrame},
   u_Types in 'engine\u_Types.pas',
   u_MoveHelpers in 'engine\u_MoveHelpers.pas',
   u_Utils in 'engine\u_Utils.pas',
@@ -58,9 +57,15 @@ uses
   u_SolvableDealCreators in 'games\u_SolvableDealCreators.pas',
   fr_ContentFrames in 'ui\fr_ContentFrames.pas' {ContentFrame: TFrame},
   fr_ResetFrames in 'ui\fr_ResetFrames.pas' {ResetFrame: TFrame},
+  fr_TableFrames in 'ui\fr_TableFrames.pas' {TableFrame: TFrame},
   u_SaveFiles in 'ui\u_SaveFiles.pas',
   fr_SolutionFrames in 'ui\fr_SolutionFrames.pas' {SolutionFrame: TFrame},
-  u_GraphicButtonBars in 'ui\u_GraphicButtonBars.pas';
+  fr_GraphFrames in 'ui\fr_GraphFrames.pas' {GraphFrame: TFrame},
+  fr_StateFrames in 'ui\fr_StateFrames.pas' {StateFrame: TFrame},
+  fr_MoveFrames in 'ui\fr_MoveFrames.pas' {MoveFrame: TFrame},
+  u_StateManagers in 'ui\u_StateManagers.pas',
+  u_MoveListDisplays in 'ui\u_MoveListDisplays.pas',
+  d_SaveSnapshotDlg in 'ui\d_SaveSnapshotDlg.pas' {SaveSnapshotDlg};
 
 {$R *.res}
 

@@ -34,7 +34,7 @@ implementation
 
 {$R *.dfm}
 
-uses u_DealCreators;
+uses u_DealCreators, u_SolvableDealCreators;
 
 { TResetFrame }
 
@@ -69,17 +69,23 @@ procedure TResetFrame.btnResetClick(Sender: TObject);
 begin
   var newState := TSnapshot.Create;
   try
-
     if rbRandom.Checked then
     begin
       TRandomDealCreator.CreateState(newState);
       fOnRestart(Self, newState);
     end;
 
+    if rbSolvable.Checked then
+    begin
+      TForwardDealCreator.CreateState(newState);
+      fOnRestart(Self, newState);
+    end;
+
+
+
   finally
     newState.Free;
   end;
-
 end;
 
 

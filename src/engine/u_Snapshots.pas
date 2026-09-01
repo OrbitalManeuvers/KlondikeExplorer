@@ -20,6 +20,7 @@ type
 
     procedure Capture(aTable: TTable);
     procedure Restore(aTable: TTable);
+    procedure Assign(aSource: TSnapshot);
 
     property Buffer: PSnapshotBuffer read fBuffer;
     property AsText: string read GetAsText write SetAsText;
@@ -129,6 +130,11 @@ begin
     stack.FaceUpCount := faceUpCount;
 
   end;
+end;
+
+procedure TSnapshot.Assign(aSource: TSnapshot);
+begin
+  fBuffer^ := aSource.fBuffer^;
 end;
 
 function TSnapshot.GetAsText: string;

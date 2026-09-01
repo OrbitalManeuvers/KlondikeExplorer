@@ -12,18 +12,20 @@ type
     Move: TMove;
   end;
 
+//  TMoveExecutedEvent = procedure (Sender: TObject; aMove: TMove) of object;
+
   TKlondikeGame = class
   private
     fTable: TTable;
     fSnapshotManager: TSnapshotManager;
     fOwnsSnapshotManager: Boolean;
     fSnapshot: TSnapshot;
-    fInitialState: TSnapshotToken;
     fMoveHistory: TList<TGameMove>;
     fHistoryIndex: Integer;
     fHintMoves: TMoveList;
     fHintIndex: Integer;
     fOnStateChanged: TNotifyEvent;
+//    fMoveEvent: TMulticastEvent<TMoveExecutedEvent>;
     function GetMoveHistory(aIndex: Integer): TGameMove;
     function GetMoveCount: Integer;
     procedure StateChanged;
@@ -51,7 +53,6 @@ type
     // Game state
     function IsWon: Boolean;
     function CanAutoComplete: Boolean;
-    procedure Restart;
     procedure CopyTableTo(aTarget: TTable);
 
     property Table: TTable read fTable;
@@ -90,6 +91,8 @@ constructor TKlondikeGame.Create(ASnapshotManager: TSnapshotManager = nil);
 begin
   inherited Create;
   fTable := TTable.Create;
+//  fMoveEvent := TMulticastEvent<TMoveExecutedEvent>.Create;
+
   if ASnapshotManager <> nil then
   begin
     fSnapshotManager := ASnapshotManager;
@@ -101,7 +104,6 @@ begin
     fOwnsSnapshotManager := True;
   end;
   fSnapshot := TSnapshot.Create;
-  fInitialState := NO_SNAPSHOT;
 
   fMoveHistory := TList<TGameMove>.Create;
   fHistoryIndex := -1;
@@ -120,23 +122,32 @@ begin
 
   fSnapshot.Free;
 
-  if fInitialState <> NO_SNAPSHOT then
-    fSnapshotManager.Delete(fInitialState);
-
   if fOwnsSnapshotManager then
     fSnapshotManager.Free;
 
   fTable.Free;
+
   inherited;
 end;
 
 procedure TKlondikeGame.Initialize(aInitialState: TSnapshot);
 begin
-  if fInitialState <> NO_SNAPSHOT then
-    fSnapshotManager.Delete(fInitialState);
-  fInitialState := fSnapshotManager.Save(aInitialState);
+  ResetHints;
 
-  Restart;
+  for var i := 0 to fMoveHistory.Count - 1 do
+    fSnapshotManager.Delete(fMoveHistory[i].Token);
+  fMoveHistory.Clear;
+  fHistoryIndex := -1;
+
+  fTable.BeginUpdate;
+  try
+    fTable.Clear;
+    aInitialState.Restore(fTable);
+  finally
+    fTable.EndUpdate;
+  end;
+
+  StateChanged;
 end;
 
 function TKlondikeGame.TryExecuteMove(const aMove: TMove): Boolean;
@@ -162,6 +173,13 @@ begin
     // apply move
     TMoveExecutor.ExecuteMove(fTable, aMove);
     Result := True;
+
+//    fMoveEvent.Notify(
+//      procedure(Handler: TMoveExecutedEvent)
+//      begin
+//        Handler(Self, aMove);
+//      end
+//    );
 
     StateChanged;
   end;
@@ -364,30 +382,6 @@ procedure TKlondikeGame.ResetHints;
 begin
   fHintMoves.Clear;
   fHintIndex := -1;
-end;
-
-procedure TKlondikeGame.Restart;
-begin
-  Assert(fInitialState <> NO_SNAPSHOT);
-
-  ResetHints;
-
-  for var i := 0 to fMoveHistory.Count - 1 do
-    fSnapshotManager.Delete(fMoveHistory[i].Token);
-  fMoveHistory.Clear;
-  fHistoryIndex := -1;
-
-  fTable.BeginUpdate;
-  try
-    fTable.Clear;
-
-    fSnapshotManager.Load(fInitialState, fSnapshot);
-    fSnapshot.Restore(fTable);
-  finally
-    fTable.EndUpdate;
-  end;
-
-  StateChanged;
 end;
 
 procedure TKlondikeGame.StateChanged;

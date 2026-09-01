@@ -47,10 +47,7 @@ type
     property Moves[I: Integer]: TMove read GetMove; default;
     property Count: Integer read GetCount;
 
-
-    // to-do
     property OnChange: TNotifyEvent read fOnChange write fOnChange;
-
 
     function GetEnumerator: TEnumerator;
   end;
@@ -110,6 +107,7 @@ end;
 procedure TMoveList.Clear;
 begin
   fItems.Clear;
+  Change;
 end;
 
 function TMoveList.GetCount: Integer;

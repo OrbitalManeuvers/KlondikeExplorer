@@ -1,23 +1,18 @@
-object TableView: TTableView
+inherited TableFrame: TTableFrame
   AlignWithMargins = True
-  Left = 0
-  Top = 0
-  Width = 640
-  Height = 480
   Margins.Left = 2
   Margins.Top = 2
   Margins.Right = 2
   Margins.Bottom = 2
   Color = clBlack
-  Font.Charset = DEFAULT_CHARSET
-  Font.Color = clWindowText
-  Font.Height = -13
-  Font.Name = 'Segoe UI'
-  Font.Style = []
   ParentColor = False
-  ParentFont = False
-  TabOrder = 0
   StyleElements = [seFont, seBorder]
+  inherited pnlBackground: TPanel
+    Top = 41
+    Height = 439
+    ExplicitTop = 41
+    ExplicitHeight = 439
+  end
   object skTable: TSkAnimatedPaintBox
     Left = 0
     Top = 41
@@ -94,11 +89,10 @@ object TableView: TTableView
       Margins.Right = 8
       Align = alRight
       Layout = tlCenter
-      ExplicitLeft = 615
       ExplicitHeight = 17
     end
   end
-  object GameActions: TActionList
+  object TableActions: TActionList
     Left = 48
     Top = 56
     object actUndo: TAction
