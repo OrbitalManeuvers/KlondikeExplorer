@@ -10,9 +10,9 @@ type
     fLog: TLog; // not owned
 
   private
-    fTable: TTable;
-    fSnapshot: TSnapshot;
-    fSnapshotManager: TSnapshotManager;
+//    fTable: TTable;
+//    fSnapshot: TSnapshot;
+//    fSnapshotManager: TSnapshotManager;
 
   public
     constructor Create(aLog: TLog);

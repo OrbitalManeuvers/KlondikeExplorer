@@ -27,6 +27,7 @@ type
   TTableActionEvent = procedure(Sender: TObject; aTableAction: TTableAction) of object;
   TCardClickEvent = procedure(Sender: TObject; aStackId: TStackId; aCardIndex: Integer) of object;
   TMoveRequestedEvent = procedure(Sender: TObject; aRequestedMove: TMove; aRequestedAnimate: Boolean) of object;
+  TProposeMoveEvent = procedure(Sender: TObject; const aMove: TMove; out aValid: Boolean; out aTargetCount: Integer) of object;
 
   TTableFrame = class(TContentFrame)
     skTable: TSkAnimatedPaintBox;
@@ -79,6 +80,7 @@ type
     fOnMoveRequested: TMoveRequestedEvent;
     fOnTableAction: TTableActionEvent;
     fOnCardClick: TCardClickEvent;
+    fOnProposeMove: TProposeMoveEvent;
 
     procedure HandleAnimationComplete(Sender: TObject; const Animation: IAnimation);
     procedure SetPreviewMode(const Value: Boolean);
@@ -102,6 +104,7 @@ type
     property OnTableAction: TTableActionEvent read fOnTableAction write fOnTableAction;
     property OnMoveRequested: TMoveRequestedEvent read fOnMoveRequested write fOnMoveRequested;
     property OnCardClick: TCardClickEvent read fOnCardClick write fOnCardClick;
+    property OnProposeMove: TProposeMoveEvent read fOnProposeMove write fOnProposeMove;
 
     property PreviewMode: Boolean read fPreviewMode write SetPreviewMode;
   end;
@@ -193,20 +196,26 @@ procedure TTableFrame.AnimateAndShowMove(aBeginState, aEndState: TSnapshot; aMov
 begin
   // this can be called before the previous animation has completed
   fDisplay.Animation := nil;
-
-  // the animated cards can come from the post animation state
-  aEndState.Restore(fTable);
+  // set up the animation state on a temporary display table so we don't mutate fTable
+  var displayTable: TTable;
+  var sourceCount: Integer;
   var cards: TArray<TCard>;
-  fTable.Stacks[aMove.Source].GetLastCards(cards, aMove.Count, False);
+  displayTable := TTable.Create;
+  try
+    aBeginState.Restore(displayTable);
+    sourceCount := displayTable.Stacks[aMove.Source].Count; // capture before stealing shifts it
+    displayTable.Stacks[aMove.Source].GetLastCards(cards, aMove.Count, True);
+    // adjust face-up count to reflect the stolen cards (match drag behavior)
+    displayTable.Stacks[aMove.Source].FaceUpCount := Max(0, displayTable.Stacks[aMove.Source].FaceUpCount - aMove.Count);
+    fDisplay.UpdateTable(displayTable);
+  finally
+    displayTable.Free;
+  end;
 
-  // save this state so we can switch to it after the animation completes
+  // save the end state so we can switch to it once the animation completes
   fPostAnimationState.Free;
   fPostAnimationState := TSnapshot.Create;
-  fPostAnimationState.Capture(fTable);
-
-  // set up the animation state
-  aBeginState.Restore(fTable);
-  fDisplay.UpdateTable(fTable);
+  fPostAnimationState.Assign(aEndState);
 
   // create move anim
   if Length(cards) > 0 then
@@ -214,8 +223,13 @@ begin
     var startPos := fLayout.Origins[aMove.Source];
     if StackIdToCategory(aMove.Source) = scTableau then
     begin
-      var offset := fLayout.TableauCardY(fTable.Stacks[aMove.Source].Count);
+      var offset := fLayout.TableauCardY(sourceCount - aMove.Count);
       startPos.Offset(0, offset);
+    end
+    else if aMove.Source = siWaste then
+    begin
+      var visIndex := Min(3, fTable.Waste.Count) - 1;
+      startPos.Offset(fLayout.WasteCardX(visIndex), 0);
     end;
 
     var endPos: TPointF := fLayout.Origins[aMove.Target];
@@ -274,13 +288,13 @@ begin
             // this just needs to put the post-animation state into the table
             if Assigned(fPostAnimationState) then
             begin
+              // apply the post-animation snapshot to our display table
               fPostAnimationState.Restore(fTable);
               FreeAndNil(fPostAnimationState);
             end;
 
             fDisplay.UpdateTable(fTable);
           end;
-
       end;
     end;
   end;
@@ -394,13 +408,29 @@ begin
     fDragInfo.GrabOffset := PointF(fMouseDownPos.X - cardOrigin.X,
       fMouseDownPos.Y - cardOrigin.Y);
 
-    // build list of drag cards, remove from local table
+    // build list of drag cards; fTable must stay untouched for hit-testing/validation
     fDragInfo.CardCount := fTable.Stacks[hitInfo.StackId].Count - hitInfo.CardIndex;
-    fTable.Stacks[hitInfo.StackId].GetLastCards(fDragInfo.Cards, fDragInfo.CardCount, True);
-    fTable.Stacks[hitInfo.StackId].FaceUpCount := fTable.Stacks[hitInfo.StackId].FaceUpCount - fDragInfo.CardCount;
+    fTable.Stacks[hitInfo.StackId].GetLastCards(fDragInfo.Cards, fDragInfo.CardCount, False);
 
-    // send local table to display
-    fDisplay.UpdateTable(fTable);
+    // send a scratch copy (with the dragged cards removed) to the display
+    var dragTable := TTable.Create;
+    try
+      var snapshot := TSnapshot.Create;
+      try
+        snapshot.Capture(fTable);
+        snapshot.Restore(dragTable);
+      finally
+        snapshot.Free;
+      end;
+
+      var discard: TArray<TCard>;
+      dragTable.Stacks[hitInfo.StackId].GetLastCards(discard, fDragInfo.CardCount, True);
+      dragTable.Stacks[hitInfo.StackId].FaceUpCount := dragTable.Stacks[hitInfo.StackId].FaceUpCount - fDragInfo.CardCount;
+
+      fDisplay.UpdateTable(dragTable);
+    finally
+      dragTable.Free;
+    end;
 
     // fall through ...
   end;
@@ -413,17 +443,27 @@ begin
 
     // check drop target
     var hitInfo := THitTester.GetHitInfo(fLayout, fTable, mousePos);
-    if hitInfo.Valid then
+    if hitInfo.Valid and (hitInfo.StackId <> fDragInfo.SourceStack) then
     begin
       var m := NewMove(fDragInfo.SourceStack, hitInfo.StackId, fDragInfo.CardCount);
-      if TMoveValidator.IsValidMove(m, fTable) then
+      var valid := False;
+      var targetCount := 0;
+
+      if not Assigned(fOnProposeMove) then
+        raise Exception.Create('TTableFrame.OnProposeMove not assigned');
+      fOnProposeMove(Self, m, valid, targetCount);
+
+      if valid then
       begin
         var dropPoint := fLayout.Origins[m.Target];
         case StackIdToCategory(m.Target) of
           scFoundation: ;
           scTableau:
             begin
-              var spacing := fLayout.StackOffset * fTable.Stacks[m.Target].Count;
+              var spacingCount := targetCount;
+              if spacingCount = 0 then
+                spacingCount := fTable.Stacks[m.Target].Count;
+              var spacing := fLayout.StackOffset * spacingCount;
               dropPoint.Offset(0, spacing);
             end;
         end;
@@ -452,15 +492,29 @@ begin
     fDragInfo.Active := False;
 
     var hitInfo := THitTester.GetHitInfo(fLayout, fTable, mousePos);
-    if hitInfo.Valid then
+    var requestedMove: Boolean := False;
+    if hitInfo.Valid and (hitInfo.StackId <> fDragInfo.SourceStack) then
     begin
       var m := NewMove(fDragInfo.SourceStack, hitInfo.StackId, fDragInfo.CardCount);
-      if TMoveValidator.IsValidMove(m, fTable) then
-        DoRequestMove(m, True);
-    end
-    else
+      var valid := False;
+      var targetCount := 0;
+
+      if not Assigned(fOnProposeMove) then
+        raise Exception.Create('TTableFrame.OnProposeMove not assigned');
+      fOnProposeMove(Self, m, valid, targetCount);
+
+      if valid then
+      begin
+        // drag/drop should execute immediately without a move animation
+        DoRequestMove(m, False);
+        requestedMove := True;
+      end;
+    end;
+
+    if not requestedMove then
     begin
-      // show flyback animation
+      // dropped somewhere that isn't a valid target (including back on the source stack itself):
+      // fly the cards back home, then restore the unmodified table
       var dropPos := PointF(mousePos.X - fDragInfo.GrabOffset.X, mousePos.Y - fDragInfo.GrabOffset.Y);
       var homePos := PointF(fMouseDownPos.X - fDragInfo.GrabOffset.X, fMouseDownPos.Y - fDragInfo.GrabOffset.Y);
       var anim := CreateFlybackAnimation(fDragInfo.Cards, dropPos, homePos,

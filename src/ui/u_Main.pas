@@ -46,7 +46,6 @@ type
     procedure FormDestroy(Sender: TObject);
   private
     Game: TKlondikeGame;
-    Table: TTable;
     InitialState: TSnapshot;
     SaveFile: TSaveFile;
     SnapshotManager: TSnapshotManager;
@@ -61,7 +60,7 @@ type
     StateFrame: TStateFrame;
     MoveFrame: TMoveFrame;
     function SnapshotLibraryFileName(): string;
-//    procedure UpdateControls;
+  //    procedure UpdateControls;
     procedure RestartTo(aSnapshot: TSnapshot);
     procedure SyncTableFromGame;
     procedure HandleSnapshotManagerChange(Sender: TObject);
@@ -70,6 +69,7 @@ type
     procedure HandleTableAction(Sender: TObject; aTableAction: TTableAction);
     procedure HandleCardClick(Sender: TObject; aStackId: TStackId; aCardIndex: Integer);
     procedure HandleMoveRequested(Sender: TObject; aRequestedMove: TMove; aRequestedAnimate: Boolean);
+      procedure ProposeMove(Sender: TObject; const aMove: TMove; out aValid: Boolean; out aTargetCount: Integer);
 
     procedure InitContentFrames;
     procedure DoneContentFrames;
@@ -98,7 +98,6 @@ procedure TMainForm.FormCreate(Sender: TObject);
 begin
   Game := TKlondikeGame.Create(SnapshotManager);
   Game.OnStateChanged := HandleGameStateChanged;
-  Table := TTable.Create;
   InitialState := TSnapshot.Create;
 
   SnapshotManager := TSnapshotManager.Create;
@@ -134,7 +133,6 @@ begin
     SnapshotLibrary.SaveToFile(fileName);
   end;
 
-  Table.Free;
   InitialState.Free;
   Game.Free;
 
@@ -198,6 +196,7 @@ begin
   TableFrame.OnTableAction := HandleTableAction;
   TableFrame.OnMoveRequested := HandleMoveRequested;
   TableFrame.OnCardClick := HandleCardClick;
+  TableFrame.OnProposeMove := ProposeMove;
 
   ContentFrames.Add(TableFrame);
 
@@ -232,7 +231,7 @@ begin
 
   Game.Initialize(InitialState);
   TableFrame.ShowState(InitialState);
-  InitialState.Restore(Table);
+  TableFrame.PreviewMode := False;
 
   StateManager.Clear;
   StateManager.CreateInitialState(InitialState);
@@ -262,12 +261,20 @@ begin
   TableFrame.ValidActions := actions;
 end;
 
+procedure TMainForm.ProposeMove(Sender: TObject; const aMove: TMove; out aValid: Boolean; out aTargetCount: Integer);
+begin
+  aValid := TMoveValidator.IsValidMove(aMove, Game.Table);
+  if aValid then
+    aTargetCount := Game.Table.Stacks[aMove.Target].Count
+  else
+    aTargetCount := 0;
+end;
+
 procedure TMainForm.SyncTableFromGame;
 begin
   var snapshot := TSnapshot.Create;
   try
     snapshot.Capture(Game.Table);
-    snapshot.Restore(Table);
     TableFrame.ShowState(snapshot);
   finally
     snapshot.Free;
@@ -300,39 +307,35 @@ end;
 
 procedure TMainForm.HandleMoveRequested(Sender: TObject; aRequestedMove: TMove; aRequestedAnimate: Boolean);
 begin
-  if TMoveValidator.IsValidMove(aRequestedMove, Game.Table) and Game.TryExecuteMove(aRequestedMove) then
-  begin
-    // animating or not, we need to capture the new state
-    var newState := TSnapshot.Create;
-    try
-      newState.Capture(Game.Table);
+  if not TMoveValidator.IsValidMove(aRequestedMove, Game.Table) then
+    Exit;
 
-      // if we're animating then send over the old state too, and the table will update itself after
-      // the animation completes
-      if aRequestedAnimate then
-      begin
-        var oldState := TSnapshot.Create;
-        try
-          oldState.Capture(Table); // where we haven't executed the move yet
+  var oldState := TSnapshot.Create;
+  try
+    oldState.Capture(Game.Table); // pre-move state
+
+    if Game.TryExecuteMove(aRequestedMove) then
+    begin
+      var newState := TSnapshot.Create;
+      try
+        newState.Capture(Game.Table);
+
+        if aRequestedAnimate and (aRequestedMove.Source <> siStock) and (aRequestedMove.Target <> siStock) then
+        begin
           TableFrame.AnimateAndShowMove(oldState, newState, aRequestedMove);
-        finally
-          oldState.Free;
+        end
+        else
+        begin
+          TableFrame.ShowState(newState);
         end;
-      end
-      else
-      begin
-        // otherwise just adopt the new state and update the view
-        newState.Restore(Table);
-        TableFrame.ShowState(newState);
+      finally
+        newState.Free;
       end;
-    finally
-      newState.Free;
     end;
-
+  finally
+    oldState.Free;
   end;
-
 end;
-
 
 function TMainForm.SnapshotLibraryFileName: string;
 begin

@@ -85,11 +85,10 @@ inherited TableFrame: TTableFrame
       Left = 628
       Top = 3
       Width = 4
-      Height = 35
+      Height = 17
       Margins.Right = 8
       Align = alRight
       Layout = tlCenter
-      ExplicitHeight = 17
     end
   end
   object TableActions: TActionList
