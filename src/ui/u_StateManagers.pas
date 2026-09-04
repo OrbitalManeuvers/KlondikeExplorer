@@ -231,7 +231,6 @@ begin
           aNode.Moves.Add(m);
       end;
 
-
     // measure heuristic at this state
     aNode.HValue := THeuristic.Score(fLocalTable);
 

@@ -81,7 +81,12 @@ begin
       fOnRestart(Self, newState);
     end;
 
-
+    if rbSnapshot.Checked then
+    begin
+      var index := cbSnapshots.ItemIndex;
+      SnapshotLibrary.LoadSnapshot(index, newState);
+      fOnRestart(Self, newState);
+    end;
 
   finally
     newState.Free;

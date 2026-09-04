@@ -59,7 +59,6 @@ uses
   fr_ResetFrames in 'ui\fr_ResetFrames.pas' {ResetFrame: TFrame},
   fr_TableFrames in 'ui\fr_TableFrames.pas' {TableFrame: TFrame},
   u_SaveFiles in 'ui\u_SaveFiles.pas',
-  fr_SolutionFrames in 'ui\fr_SolutionFrames.pas' {SolutionFrame: TFrame},
   fr_GraphFrames in 'ui\fr_GraphFrames.pas' {GraphFrame: TFrame},
   fr_StateFrames in 'ui\fr_StateFrames.pas' {StateFrame: TFrame},
   fr_MoveFrames in 'ui\fr_MoveFrames.pas' {MoveFrame: TFrame},

@@ -10,9 +10,9 @@ uses
   System.Generics.Collections, Vcl.AppEvnts, Vcl.Tabs,
 
   u_SnapshotLibraries, u_SnapshotManagers, fr_TableFrames, u_Snapshots,
-  fr_ContentFrames, fr_ResetFrames, fr_SolutionFrames, fr_GraphFrames,
+  fr_ContentFrames, fr_ResetFrames, fr_GraphFrames,
   fr_StateFrames, fr_MoveFrames, u_StateManagers,
-  u_SaveFiles, u_Games, u_Types, u_Tables;
+  u_SaveFiles, u_Types, u_Tables;
 
 type
   TMainForm = class(TForm)
@@ -45,7 +45,6 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormDestroy(Sender: TObject);
   private
-    Game: TKlondikeGame;
     InitialState: TSnapshot;
     SaveFile: TSaveFile;
     SnapshotManager: TSnapshotManager;
@@ -54,7 +53,6 @@ type
     ContentFrames: TList<TContentFrame>;
 
     ResetFrame: TResetFrame;
-    SolutionFrame: TSolutionFrame;
     TableFrame: TTableFrame;
     GraphFrame: TGraphFrame;
     StateFrame: TStateFrame;
@@ -71,6 +69,9 @@ type
     procedure HandleMoveRequested(Sender: TObject; aRequestedMove: TMove; aRequestedAnimate: Boolean);
       procedure ProposeMove(Sender: TObject; const aMove: TMove; out aValid: Boolean; out aTargetCount: Integer);
 
+    procedure SaveSnapshotPrompt;
+    procedure UpdateTableDisplay(aNewState: TSnapshot);
+
     procedure InitContentFrames;
     procedure DoneContentFrames;
   public
@@ -84,7 +85,7 @@ implementation
 {$R *.dfm}
 
 uses System.IOUtils, Vcl.Themes,
-  u_MoveValidators;
+  u_MoveValidators, d_SaveSnapshotDlg, u_Heuristics;
 
 
 { Utility }
@@ -96,8 +97,6 @@ end;
 { TMainForm }
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
-  Game := TKlondikeGame.Create(SnapshotManager);
-  Game.OnStateChanged := HandleGameStateChanged;
   InitialState := TSnapshot.Create;
 
   SnapshotManager := TSnapshotManager.Create;
@@ -134,7 +133,6 @@ begin
   end;
 
   InitialState.Free;
-  Game.Free;
 
   StateManager.Free;
   SnapshotLibrary.Free;
@@ -154,12 +152,6 @@ begin
   LeftColumnSplitShape.Align := alTop;
   LeftColumnSplitShape.Brush.Color := StyleServices.GetSystemColor(clBtnShadow);
   LeftColumnBorderShape.Brush.Color := StyleServices.GetSystemColor(clBtnShadow);
-
-  SolutionFrame := TSolutionFrame.Create(Self, SnapshotManager, SnapshotLibrary);
-  SolutionFrame.Align := alClient;
-  SolutionFrame.Parent := LeftColumn;
-  SolutionFrame.InitContent;
-  ContentFrames.Add(SolutionFrame);
 
   // CenterColumn
   MoveFrame := TMoveFrame.Create(Self, SnapshotManager, SnapshotLibrary);
@@ -229,12 +221,12 @@ begin
   if aSnapshot <> InitialState then
     InitialState.Assign(aSnapshot);
 
-  Game.Initialize(InitialState);
-  TableFrame.ShowState(InitialState);
+  UpdateTableDisplay(InitialState);
   TableFrame.PreviewMode := False;
 
   StateManager.Clear;
   StateManager.CreateInitialState(InitialState);
+  HandleGameStateChanged(nil);
 end;
 
 procedure TMainForm.HandleResetFrameRestart(Sender: TObject; NewState: TSnapshot);
@@ -251,34 +243,22 @@ end;
 procedure TMainForm.HandleGameStateChanged(Sender: TObject);
 begin
   var actions: TTableActions := [taHint, taRestart, taSnapshot];
-  if Game.CanUndo then
-    Include(actions, taUndo);
-  if Game.CanRedo then
-    Include(actions, taRedo);
-  if Game.CanAutoComplete then
-    Include(actions, taComplete);
 
   TableFrame.ValidActions := actions;
 end;
 
 procedure TMainForm.ProposeMove(Sender: TObject; const aMove: TMove; out aValid: Boolean; out aTargetCount: Integer);
 begin
-  aValid := TMoveValidator.IsValidMove(aMove, Game.Table);
-  if aValid then
-    aTargetCount := Game.Table.Stacks[aMove.Target].Count
-  else
-    aTargetCount := 0;
+  aValid := False;
 end;
 
 procedure TMainForm.SyncTableFromGame;
 begin
-  var snapshot := TSnapshot.Create;
-  try
-    snapshot.Capture(Game.Table);
-    TableFrame.ShowState(snapshot);
-  finally
-    snapshot.Free;
-  end;
+end;
+
+procedure TMainForm.UpdateTableDisplay(aNewState: TSnapshot);
+begin
+//  TableFrame.ShowState(aNewState, score);
 end;
 
 procedure TMainForm.HandleTableAction(Sender: TObject; aTableAction: TTableAction);
@@ -286,12 +266,12 @@ begin
   case aTableAction of
     taHint:
       begin
-        var hintMove: TMove;
-        if Game.GetNextHint(hintMove) then
-          TableFrame.ShowHintMove(hintMove);
+//        var hintMove: TMove;
+//        if Game.GetNextHint(hintMove) then
+//          TableFrame.ShowHintMove(hintMove);
       end;
-    taUndo: begin Game.Undo; SyncTableFromGame; end;
-    taRedo: begin Game.Redo; SyncTableFromGame; end;
+//    taUndo: begin Game.Undo; SyncTableFromGame; end;
+//    taRedo: begin Game.Redo; SyncTableFromGame; end;
     taComplete: ;
     taRestart: RestartTo(InitialState);
     taSnapshot: ;
@@ -300,41 +280,39 @@ end;
 
 procedure TMainForm.HandleCardClick(Sender: TObject; aStackId: TStackId; aCardIndex: Integer);
 begin
-  var m := Default(TMove);
-  if Game.GetAutoMove(aStackId, aCardIndex, m) then
-    HandleMoveRequested(nil, m, True);
+  //
 end;
 
 procedure TMainForm.HandleMoveRequested(Sender: TObject; aRequestedMove: TMove; aRequestedAnimate: Boolean);
 begin
-  if not TMoveValidator.IsValidMove(aRequestedMove, Game.Table) then
-    Exit;
+//
+end;
 
-  var oldState := TSnapshot.Create;
+procedure TMainForm.SaveSnapshotPrompt;
+begin
+  var dlg := d_SaveSnapshotDlg.TSaveSnapshotDlg.Create(Application);
   try
-    oldState.Capture(Game.Table); // pre-move state
-
-    if Game.TryExecuteMove(aRequestedMove) then
+    if dlg.Execute(SnapshotLibrary) then
     begin
-      var newState := TSnapshot.Create;
-      try
-        newState.Capture(Game.Table);
-
-        if aRequestedAnimate and (aRequestedMove.Source <> siStock) and (aRequestedMove.Target <> siStock) then
-        begin
-          TableFrame.AnimateAndShowMove(oldState, newState, aRequestedMove);
-        end
-        else
-        begin
-          TableFrame.ShowState(newState);
+      if dlg.rbInitialState.Checked then
+      begin
+        SnapshotLibrary.Add(dlg.edtName.Text, InitialState);
+      end
+      else
+      begin
+        var snapshot := TSnapshot.Create;
+        try
+//          snapshot.Capture(Game.Table);
+//          SnapshotLibrary.Add(dlg.edtName.Text, snapshot);
+        finally
+          snapshot.Free;
         end;
-      finally
-        newState.Free;
       end;
     end;
   finally
-    oldState.Free;
+    dlg.Free;
   end;
+
 end;
 
 function TMainForm.SnapshotLibraryFileName: string;

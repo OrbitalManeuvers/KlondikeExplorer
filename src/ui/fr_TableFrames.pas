@@ -95,7 +95,7 @@ type
     procedure DoneContent; override;
 
     // 9/1 refactor
-    procedure ShowState(aSnapshot: TSnapshot); // standard update method
+    procedure ShowState(aSnapshot: TSnapshot; aScore: Single); // standard update method
     procedure AnimateAndShowMove(aBeginState, aEndState: TSnapshot; aMove: TMove);
     procedure ShowHintMove(aMove: TMove);
 
@@ -163,28 +163,6 @@ procedure TTableFrame.actSnapshotExecute(Sender: TObject);  // remove. code goes
 begin
   DoAction(taSnapshot);
 
-//  var dlg := d_SaveSnapshotDlg.TSaveSnapshotDlg.Create(Application);
-//  try
-//    if dlg.Execute(SnapshotLibrary) then
-//    begin
-//      if dlg.rbInitialState.Checked then
-//      begin
-//        SnapshotLibrary.Add(dlg.edtName.Text, fInitialState);
-//      end
-//      else
-//      begin
-//        var snapshot := TSnapshot.Create;
-//        try
-//          snapshot.Capture(fGame.Table);
-//          SnapshotLibrary.Add(dlg.edtName.Text, snapshot);
-//        finally
-//          snapshot.Free;
-//        end;
-//      end;
-//    end;
-//  finally
-//    dlg.Free;
-//  end;
 end;
 
 procedure TTableFrame.actUndoExecute(Sender: TObject); // ok
@@ -300,10 +278,11 @@ begin
   end;
 end;
 
-procedure TTableFrame.ShowState(aSnapshot: TSnapshot);
+procedure TTableFrame.ShowState(aSnapshot: TSnapshot; aScore: Single);
 begin
   aSnapshot.Restore(fTable);
   fDisplay.UpdateTable(fTable);
+  lblHScore.Caption := Format('%f', [aScore]);
 end;
 
 procedure TTableFrame.SetPreviewMode(const Value: Boolean); // ok

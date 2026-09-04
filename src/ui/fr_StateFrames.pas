@@ -94,7 +94,6 @@ begin
   end;
 end;
 
-
 procedure TStateFrame.TreeGetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
   Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
 begin

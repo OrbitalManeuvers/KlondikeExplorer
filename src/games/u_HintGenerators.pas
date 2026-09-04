@@ -16,9 +16,9 @@ uses u_Types, u_CardHelpers, u_MoveHelpers, u_MoveGenerators, u_MoveValidators,
 
 { THintGenerator }
 
-// to fix:
+// Need fixes:
 // - foundation to tableau
-//
+// - entire tableau to empty tableau?
 
 
 (*
