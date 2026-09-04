@@ -3,7 +3,6 @@ inherited StateFrame: TStateFrame
   ExplicitWidth = 284
   inherited pnlBackground: TPanel
     Width = 284
-    ExplicitTop = 0
     ExplicitWidth = 284
     object lblTitle: TLabel
       Left = 16
@@ -44,6 +43,7 @@ inherited StateFrame: TStateFrame
       Header.AutoSizeIndex = 0
       Header.MainColumn = -1
       TabOrder = 0
+      OnBeforeCellPaint = TreeBeforeCellPaint
       OnGetText = TreeGetText
       OnInitChildren = TreeInitChildren
       OnInitNode = TreeInitNode

@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
 
-  u_SnapshotManagers, u_SnapshotLibraries, Vcl.ExtCtrls;
+  u_SnapshotManagers, u_SnapshotLibraries, u_StateManagers, Vcl.ExtCtrls;
 
 type
   TContentFrame = class(TFrame)
@@ -25,6 +25,9 @@ type
     // lifetime resource mgmt
     procedure InitContent; virtual;
     procedure DoneContent; virtual;
+
+    // cursor change notification (base does nothing; views override)
+    procedure HandleCursorChange(aNode: TStateNode); virtual;
   end;
   TContentFrameClass = class of TContentFrame;
 
@@ -48,6 +51,11 @@ begin
 end;
 
 procedure TContentFrame.DoneContent;
+begin
+  //
+end;
+
+procedure TContentFrame.HandleCursorChange(aNode: TStateNode);
 begin
   //
 end;

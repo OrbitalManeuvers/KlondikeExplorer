@@ -1,41 +1,41 @@
-unit u_StateManagers;
+﻿unit u_StateManagers;
 
 interface
 
 uses System.Generics.Collections,
   u_Types, u_SnapshotTypes, u_Snapshots, u_SnapshotManagers, u_MoveLists,
-  u_Tables;
+  u_Tables, u_Authors;
 
 type
   TStateNode = class
   private
     fName: string;
+    fAuthor: TAuthor;
     fParent: TStateNode;
     fParentMoveIndex: Integer;
     fChildren: TList<TStateNode>;
     function GetChild(aIndex: Integer): TStateNode;
     function GetChildCount: Integer;
     procedure AddChild(aNode: TStateNode);
-
   public
     Token: TSnapshotToken;
     HValue: Single;
     Moves: TMoveList;
 
-    constructor Create(aParent: TStateNode; aParentMoveIndex: Integer; const aName: string);
+    constructor Create(aParent: TStateNode; aParentMoveIndex: Integer; const aName: string; aAuthor: TAuthor);
     destructor Destroy; override;
 
     property Name: string read fName;
+    property Author: TAuthor read fAuthor;
     property Parent: TStateNode read fParent;
     property ParentMoveIndex: Integer read fParentMoveIndex;
-
-    function HasChild(aMoveIndex: Integer): Boolean; // do we already have this state?
+    function ChildForMove(aMoveIndex: Integer): TStateNode;
     property ChildCount: Integer read GetChildCount;
     property ChildNodes[aIndex: Integer]: TStateNode read GetChild;
   end;
 
 
-  TStateChangeEvent = procedure(Sender: TObject; ParentNode, ChildNode: TStateNode) of object;
+  TCursorChangeEvent = procedure(Sender: TObject; aNode: TStateNode) of object;
 
   TStateManager = class
   private
@@ -45,10 +45,14 @@ type
     fRootNode: TStateNode;
     fNodes: TObjectList<TStateNode>;
 
+    fCursor: TStateNode;
+
     fSnapshotManager: TSnapshotManager;
-    fOnStateChange: TStateChangeEvent;
+    fOnCursorChange: TCursorChangeEvent;
     function GetStateCount: Integer;
     procedure PopulateNode(aNode: TStateNode);
+    procedure SetCursorInternal(aNode: TStateNode);
+    function CreateChild(aParent: TStateNode; aMoveIndex: Integer; aAuthor: TAuthor): TStateNode;
   public
     constructor Create(aSnapshotManager: TSnapshotManager);
     destructor Destroy; override;
@@ -57,25 +61,36 @@ type
 
     procedure Clear;
     procedure CreateInitialState(aSnapshot: TSnapshot);
-    procedure CreateNewState(aParent: TStateNode; aMoveIndex: Integer; const aCaption: string);
 
     procedure ApplyState(aSource: TStateNode; aTarget: TTable);
+    procedure LoadState(aNode: TStateNode; aTarget: TSnapshot);
 
-    property OnStateChange: TStateChangeEvent read fOnStateChange write fOnStateChange;
+    procedure SetCursor(aNode: TStateNode);
+    function CanNavigateUp: Boolean;
+    procedure NavigateUp;
+    procedure NavigateToChild(aChildIndex: Integer);
+    procedure ExecuteMoveAtCursor(aMoveIndex: Integer; aAuthor: TAuthor);
+    function FindAutoMoveAtCursor(aStackId: TStackId; aCardIndex: Integer;
+      out aMove: TMove): Boolean;
+
     property StateCount: Integer read GetStateCount;
+
+    property Cursor: TStateNode read fCursor;
+    property OnCursorChange: TCursorChangeEvent read fOnCursorChange write fOnCursorChange;
 
   end;
 
 implementation
 
-uses u_MoveGenerators, u_MoveValidators, u_Heuristics, u_MoveExecutors;
+uses u_MoveGenerators, u_MoveValidators, u_Heuristics, u_MoveExecutors, u_MoveHelpers, u_AutoMovers;
 
 { TStateNode }
 
-constructor TStateNode.Create(aParent: TStateNode; aParentMoveIndex: Integer; const aName: string);
+constructor TStateNode.Create(aParent: TStateNode; aParentMoveIndex: Integer; const aName: string; aAuthor: TAuthor);
 begin
   inherited Create;
   fName := aName;
+  fAuthor := aAuthor;
   fParent := aParent;
   fParentMoveIndex := aParentMoveIndex;
   Moves := TMoveList.Create;
@@ -111,16 +126,17 @@ begin
     Result := 0;
 end;
 
-function TStateNode.HasChild(aMoveIndex: Integer): Boolean;
+function TStateNode.ChildForMove(aMoveIndex: Integer): TStateNode;
 begin
-  Result := False;
-  if ChildCount > 0 then
+  Result := nil;
+  if Assigned(fChildren) then
   begin
-    for var i := 0 to fChildren.Count - 1 do
-      if fChildren[i].ParentMoveIndex = aMoveIndex then
-        Exit(True);
+    for var answer in fChildren do
+      if answer.ParentMoveIndex = aMoveIndex then
+        Exit(answer);
   end;
 end;
+
 
 { TStateManager }
 
@@ -147,8 +163,8 @@ procedure TStateManager.CreateInitialState(aSnapshot: TSnapshot);
 begin
   Assert(fNodes.Count = 0);
 
-  // create root node
-  fRootNode := TStateNode.Create(nil, 0, 'Initial State');
+  // create root node — authored by the player
+  fRootNode := TStateNode.Create(nil, 0, 'Initial State', auPlayer);
   fNodes.Add(fRootNode);
 
   // save the snapshot
@@ -161,39 +177,41 @@ begin
   // use LocalTable to generate moves
   PopulateNode(fRootNode);
 
-  // notify
-  if Assigned(fOnStateChange) then
-    fOnStateChange(Self, nil, fRootNode);
-
+  // seed the cursor at the root (also fires OnCursorChange once)
+  SetCursorInternal(fRootNode);
 end;
 
-procedure TStateManager.CreateNewState(aParent: TStateNode; aMoveIndex: Integer; const aCaption: string);
-var
-  child: TStateNode;
+function TStateManager.CreateChild(aParent: TStateNode; aMoveIndex: Integer; aAuthor: TAuthor): TStateNode;
 begin
-  // create new node
-  child := TStateNode.Create(aParent, aMoveIndex, aCaption);
-  fNodes.Add(child);
-  aParent.AddChild(child);
-
   // local table gets populated from parent node
   fSnapshotManager.Load(aParent.Token, fLocalSnapshot);
   fLocalSnapshot.Restore(fLocalTable);
 
   // execute the move on the local table
   var m := aParent.Moves[aMoveIndex];
+
+  // create new node, named after the move that produced it, authored once
+  Result := TStateNode.Create(aParent, aMoveIndex, m.AsText, aAuthor);
+  fNodes.Add(Result);
+  aParent.AddChild(Result);
+
   TMoveExecutor.ExecuteMove(fLocalTable, m);
 
   // take a snapshot of the new table state for the new node
   fLocalSnapshot.Capture(fLocalTable);
-  child.Token := fSnapshotManager.Save(fLocalSnapshot);
+  Result.Token := fSnapshotManager.Save(fLocalSnapshot);
 
   // uses LocalTable to populate moves
-  PopulateNode(child);
+  PopulateNode(Result);
+end;
 
-  // notify
-  if Assigned(fOnStateChange) then
-    fOnStateChange(Self, aParent, child);
+procedure TStateManager.ExecuteMoveAtCursor(aMoveIndex: Integer; aAuthor: TAuthor);
+begin
+  var existing := fCursor.ChildForMove(aMoveIndex);
+  if Assigned(existing) then
+    SetCursorInternal(existing)                     // follow — no creation, no re-author
+  else
+    SetCursorInternal(CreateChild(fCursor, aMoveIndex, aAuthor));  // authored once
 end;
 
 procedure TStateManager.ApplyState(aSource: TStateNode; aTarget: TTable);
@@ -212,9 +230,50 @@ begin
   fRootNode := nil;
 end;
 
+procedure TStateManager.SetCursor(aNode: TStateNode);
+begin
+  SetCursorInternal(aNode);
+end;
+
+function TStateManager.CanNavigateUp: Boolean;
+begin
+  Result := Assigned(fCursor.Parent);
+end;
+
+procedure TStateManager.NavigateUp;
+begin
+  if CanNavigateUp then
+    SetCursor(fCursor.Parent);
+end;
+
+procedure TStateManager.NavigateToChild(aChildIndex: Integer);
+begin
+  SetCursor(fCursor.ChildNodes[aChildIndex]);
+end;
+
+procedure TStateManager.SetCursorInternal(aNode: TStateNode);
+begin
+  fCursor := aNode;
+  if Assigned(fOnCursorChange) then
+    fOnCursorChange(Self, aNode);
+end;
+
 function TStateManager.GetStateCount: Integer;
 begin
   Result := fNodes.Count;
+end;
+
+procedure TStateManager.LoadState(aNode: TStateNode; aTarget: TSnapshot);
+begin
+  fSnapshotManager.Load(aNode.Token, aTarget);
+end;
+
+function TStateManager.FindAutoMoveAtCursor(aStackId: TStackId; aCardIndex: Integer;
+  out aMove: TMove): Boolean;
+begin
+  // reconstruct the cursor's table into our scratch table, then let the rules decide
+  ApplyState(fCursor, fLocalTable);
+  Result := TAutoMover.FindAutoMove(fLocalTable, aStackId, aCardIndex, aMove);
 end;
 
 procedure TStateManager.PopulateNode(aNode: TStateNode);

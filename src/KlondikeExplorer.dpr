@@ -27,7 +27,6 @@ uses
   u_GameDisplays in 'display\u_GameDisplays.pas',
   u_AnimationTypes in 'display\u_AnimationTypes.pas',
   u_Animations in 'display\u_Animations.pas',
-  u_Games in 'games\u_Games.pas',
   u_RenderUtils in 'display\u_RenderUtils.pas',
   u_Layouts in 'display\u_Layouts.pas',
   u_DisplayConsts in 'display\u_DisplayConsts.pas',
@@ -63,8 +62,9 @@ uses
   fr_StateFrames in 'ui\fr_StateFrames.pas' {StateFrame: TFrame},
   fr_MoveFrames in 'ui\fr_MoveFrames.pas' {MoveFrame: TFrame},
   u_StateManagers in 'ui\u_StateManagers.pas',
-  u_MoveListDisplays in 'ui\u_MoveListDisplays.pas',
-  d_SaveSnapshotDlg in 'ui\d_SaveSnapshotDlg.pas' {SaveSnapshotDlg};
+  d_SaveSnapshotDlg in 'ui\d_SaveSnapshotDlg.pas' {SaveSnapshotDlg},
+  u_Authors in 'ui\u_Authors.pas',
+  u_AutoMovers in 'engine\u_AutoMovers.pas';
 
 {$R *.res}
 

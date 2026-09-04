@@ -1,4 +1,4 @@
-unit u_Main;
+﻿unit u_Main;
 
 interface
 
@@ -50,6 +50,7 @@ type
     SnapshotManager: TSnapshotManager;
     SnapshotLibrary: TSnapshotLibrary;
     StateManager: TStateManager;
+    Snapshot: TSnapshot;
     ContentFrames: TList<TContentFrame>;
 
     ResetFrame: TResetFrame;
@@ -60,17 +61,19 @@ type
     function SnapshotLibraryFileName(): string;
   //    procedure UpdateControls;
     procedure RestartTo(aSnapshot: TSnapshot);
-    procedure SyncTableFromGame;
+    procedure UpdateTableActions;
     procedure HandleSnapshotManagerChange(Sender: TObject);
-    procedure HandleGameStateChanged(Sender: TObject);
     procedure HandleResetFrameRestart(Sender: TObject; NewState: TSnapshot);
     procedure HandleTableAction(Sender: TObject; aTableAction: TTableAction);
     procedure HandleCardClick(Sender: TObject; aStackId: TStackId; aCardIndex: Integer);
     procedure HandleMoveRequested(Sender: TObject; aRequestedMove: TMove; aRequestedAnimate: Boolean);
       procedure ProposeMove(Sender: TObject; const aMove: TMove; out aValid: Boolean; out aTargetCount: Integer);
 
+    procedure HandleCursorChange(Sender: TObject; aNode: TStateNode);
+    procedure HandleMoveSelected(Sender: TObject; aMoveIndex: Integer);
+    procedure HandleStateNavigate(Sender: TObject; aNode: TStateNode);
+
     procedure SaveSnapshotPrompt;
-    procedure UpdateTableDisplay(aNewState: TSnapshot);
 
     procedure InitContentFrames;
     procedure DoneContentFrames;
@@ -85,7 +88,7 @@ implementation
 {$R *.dfm}
 
 uses System.IOUtils, Vcl.Themes,
-  u_MoveValidators, d_SaveSnapshotDlg, u_Heuristics;
+  u_MoveValidators, d_SaveSnapshotDlg, u_Heuristics, u_Authors;
 
 
 { Utility }
@@ -107,7 +110,10 @@ begin
   if TFile.Exists(fileName) then
     SnapshotLibrary.LoadFromFile(fileName);
 
+  Snapshot := TSnapshot.Create; // working snapshot
+
   StateManager := TStateManager.Create(SnapshotManager);
+  StateManager.OnCursorChange := HandleCursorChange;
 
   ContentFrames := TList<TContentFrame>.Create;
   InitContentFrames;
@@ -133,6 +139,7 @@ begin
   end;
 
   InitialState.Free;
+  Snapshot.Free;
 
   StateManager.Free;
   SnapshotLibrary.Free;
@@ -158,6 +165,7 @@ begin
   MoveFrame.Align := alBottom;
   MoveFrame.Parent := CenterColumn;
   MoveFrame.InitContent;
+  MoveFrame.OnMoveSelected := HandleMoveSelected;
   ContentFrames.Add(MoveFrame);
 
   HSplitter.Align := alBottom;
@@ -167,6 +175,7 @@ begin
   StateFrame.Parent := CenterColumn;
   StateFrame.InitContent;
   StateFrame.StateManager := StateManager;
+  StateFrame.OnNavigate := HandleStateNavigate;
   ContentFrames.Add(StateFrame);
 
   // RightColumn
@@ -221,12 +230,11 @@ begin
   if aSnapshot <> InitialState then
     InitialState.Assign(aSnapshot);
 
-  UpdateTableDisplay(InitialState);
+  // the new state begins at the StateManager
+  StateManager.Clear;
   TableFrame.PreviewMode := False;
 
-  StateManager.Clear;
   StateManager.CreateInitialState(InitialState);
-  HandleGameStateChanged(nil);
 end;
 
 procedure TMainForm.HandleResetFrameRestart(Sender: TObject; NewState: TSnapshot);
@@ -240,25 +248,26 @@ begin
     StatusBar.SimpleText := SnapshotManager.Storage.Stats.AsText;
 end;
 
-procedure TMainForm.HandleGameStateChanged(Sender: TObject);
+procedure TMainForm.HandleStateNavigate(Sender: TObject; aNode: TStateNode);
 begin
-  var actions: TTableActions := [taHint, taRestart, taSnapshot];
+  //
+  StateManager.SetCursor(aNode);
 
-  TableFrame.ValidActions := actions;
+end;
+
+procedure TMainForm.UpdateTableActions;
+begin
+  TableFrame.ValidActions := [taHint, taRestart, taSnapshot];
 end;
 
 procedure TMainForm.ProposeMove(Sender: TObject; const aMove: TMove; out aValid: Boolean; out aTargetCount: Integer);
 begin
-  aValid := False;
-end;
+  aValid := StateManager.Cursor.Moves.IndexOfMove(aMove) <> -1;
 
-procedure TMainForm.SyncTableFromGame;
-begin
-end;
-
-procedure TMainForm.UpdateTableDisplay(aNewState: TSnapshot);
-begin
-//  TableFrame.ShowState(aNewState, score);
+  // aTargetCount positions the drop-ghost below the cards already in a tableau target.
+  // 0 tells the table frame to use its own displayed table's target-stack count, which is
+  // the current cursor state — exactly the value we'd otherwise recompute here.
+  aTargetCount := 0;
 end;
 
 procedure TMainForm.HandleTableAction(Sender: TObject; aTableAction: TTableAction);
@@ -270,22 +279,60 @@ begin
 //        if Game.GetNextHint(hintMove) then
 //          TableFrame.ShowHintMove(hintMove);
       end;
-//    taUndo: begin Game.Undo; SyncTableFromGame; end;
-//    taRedo: begin Game.Redo; SyncTableFromGame; end;
+
     taComplete: ;
     taRestart: RestartTo(InitialState);
-    taSnapshot: ;
+    taSnapshot: SaveSnapshotPrompt;
   end;
 end;
 
 procedure TMainForm.HandleCardClick(Sender: TObject; aStackId: TStackId; aCardIndex: Integer);
 begin
-  //
+  var m: TMove;
+  if not StateManager.FindAutoMoveAtCursor(aStackId, aCardIndex, m) then
+    Exit;
+
+  var moveIndex := StateManager.Cursor.Moves.IndexOfMove(m);
+  Assert(moveIndex <> -1); // an auto-move must exist in the cursor's generated move list
+  StateManager.ExecuteMoveAtCursor(moveIndex, auPlayer);
+end;
+
+procedure TMainForm.HandleCursorChange(Sender: TObject; aNode: TStateNode);
+begin
+  // currently: supplies MoveFrame and StateFrame
+  for var f in ContentFrames do
+    f.HandleCursorChange(aNode);
+
+  // set up table view
+  StateManager.LoadState(aNode, Snapshot);
+  TableFrame.ShowState(Snapshot, aNode.HValue);
+  UpdateTableActions;
+end;
+
+procedure TMainForm.HandleMoveSelected(Sender: TObject; aMoveIndex: Integer);
+begin
+  // todo
+
+  var childNode := StateManager.Cursor.ChildForMove(aMoveIndex);
+  if Assigned(childNode) then
+    StateManager.NavigateToChild(aMoveIndex)
+  else
+  begin
+    // todo: create move preview on table
+  end;
+
+
 end;
 
 procedure TMainForm.HandleMoveRequested(Sender: TObject; aRequestedMove: TMove; aRequestedAnimate: Boolean);
 begin
-//
+  // find move
+  var moveIndex := StateManager.Cursor.Moves.IndexOfMove(aRequestedMove);
+
+  Assert(moveIndex <> -1); // this would need to be investigated
+  StateManager.ExecuteMoveAtCursor(moveIndex, auPlayer);
+
+
 end;
 
 procedure TMainForm.SaveSnapshotPrompt;
@@ -300,13 +347,8 @@ begin
       end
       else
       begin
-        var snapshot := TSnapshot.Create;
-        try
-//          snapshot.Capture(Game.Table);
-//          SnapshotLibrary.Add(dlg.edtName.Text, snapshot);
-        finally
-          snapshot.Free;
-        end;
+        StateManager.LoadState(StateManager.Cursor, Snapshot);
+        SnapshotLibrary.Add(dlg.edtName.Text, Snapshot);
       end;
     end;
   finally
@@ -354,7 +396,5 @@ procedure TMainForm.actTestsExecute(Sender: TObject);
 begin
   //
 end;
-
-
 
 end.

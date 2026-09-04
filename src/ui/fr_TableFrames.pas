@@ -22,7 +22,7 @@ type
     GrabOffset: TPointF;      // mouse-down position relative to card top-left
   end;
 
-  TTableAction = (taHint, taUndo, taRedo, taComplete, taRestart, taSnapshot);
+  TTableAction = (taHint, taComplete, taRestart, taSnapshot);
   TTableActions = set of TTableAction;
   TTableActionEvent = procedure(Sender: TObject; aTableAction: TTableAction) of object;
   TCardClickEvent = procedure(Sender: TObject; aStackId: TStackId; aCardIndex: Integer) of object;
@@ -32,8 +32,6 @@ type
   TTableFrame = class(TContentFrame)
     skTable: TSkAnimatedPaintBox;
     TableActions: TActionList;
-    actUndo: TAction;
-    actRedo: TAction;
     actHint: TAction;
     actRestart: TAction;
     actAutoComplete: TAction;
@@ -55,8 +53,6 @@ type
     procedure skTableMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure skTableResize(Sender: TObject);
-    procedure actUndoExecute(Sender: TObject);
-    procedure actRedoExecute(Sender: TObject);
     procedure actHintExecute(Sender: TObject);
     procedure actRestartExecute(Sender: TObject);
     procedure actAutoCompleteExecute(Sender: TObject);
@@ -165,11 +161,6 @@ begin
 
 end;
 
-procedure TTableFrame.actUndoExecute(Sender: TObject); // ok
-begin
-  DoAction(taUndo);
-end;
-
 procedure TTableFrame.AnimateAndShowMove(aBeginState, aEndState: TSnapshot; aMove: TMove); // new
 begin
   // this can be called before the previous animation has completed
@@ -242,11 +233,6 @@ begin
   DoAction(taHint);
 end;
 
-procedure TTableFrame.actRedoExecute(Sender: TObject); // ok
-begin
-  DoAction(taRedo);
-end;
-
 procedure TTableFrame.actRestartExecute(Sender: TObject); // ok
 begin
   DoAction(taRestart);
@@ -303,8 +289,6 @@ procedure TTableFrame.SetValidActions(const Value: TTableActions); // keep
 begin
   if not fPreviewMode then
   begin
-    actUndo.Enabled := taUndo in Value;
-    actRedo.Enabled := taRedo in Value;
     actHint.Enabled := taHint in Value;
     actRestart.Enabled := taRestart in Value;
     actSnapshot.Enabled := taSnapshot in Value;
@@ -508,11 +492,7 @@ begin
     // this is a click ... does it matter?
     var hitInfo := THitTester.GetHitInfo(fLayout, fTable, mousePos);
     if hitInfo.Valid then
-    begin
-      var autoMove := Default(TMove);
       DoCardClick(hitInfo.StackId, hitInfo.CardIndex);
-    end;
-
   end;
 
   fMouseIsDown := False;

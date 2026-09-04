@@ -42,6 +42,7 @@ type
     procedure EndUpdate;
     procedure Add(aMove: TMove); overload;
     procedure Add(aSource, aTarget: TStackId; aCount: Integer = 1); overload;
+    function IndexOfMove(aMove: TMove): Integer;
 
     property Name: string read fName write fName;
     property Moves[I: Integer]: TMove read GetMove; default;
@@ -118,6 +119,25 @@ end;
 function TMoveList.GetMove(I: Integer): TMove;
 begin
   Result := fItems[I];
+end;
+
+function TMoveList.IndexOfMove(aMove: TMove): Integer;
+
+  function SameMove(aLeft, aRight: TMove): Boolean;
+  begin
+    Result := (aLeft.Source = aRight.Source) and (aLeft.Target = aRight.Target) and (aLeft.Count = aRight.Count);
+  end;
+
+begin
+  Result := -1;
+
+  for var i := 0 to fItems.Count - 1 do
+  begin
+    if SameMove(fItems[i], aMove) then
+      Exit(i);
+
+  end;
+
 end;
 
 procedure TMoveList.Add(aMove: TMove);

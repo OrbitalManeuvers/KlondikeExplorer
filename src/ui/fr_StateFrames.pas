@@ -7,9 +7,11 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, fr_ContentFrames, Vcl.ExtCtrls,
   VirtualTrees, Vcl.StdCtrls,
 
-  u_Types, u_StateManagers;
+  u_Types, u_StateManagers, u_Authors;
 
 type
+  TNodeNavigateEvent = procedure(Sender: TObject; aNode: TStateNode) of object;
+
   TStateFrame = class(TContentFrame)
     lblTitle: TLabel;
     Tree: TVirtualStringTree;
@@ -20,15 +22,22 @@ type
     procedure TreeGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex;
       TextType: TVSTTextType; var CellText: string);
     procedure TreeNodeClick(Sender: TBaseVirtualTree; const HitInfo: THitInfo);
+    procedure TreeBeforeCellPaint(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
+      Node: PVirtualNode; Column: TColumnIndex; CellPaintMode: TVTCellPaintMode;
+      CellRect: TRect; var ContentRect: TRect);
   private
     fStateManager: TStateManager;
+    fOnNavigate: TNodeNavigateEvent;
     procedure SetStateManager(const Value: TStateManager);
     procedure HandleStateChange(Sender: TObject; ParentNode, ChildNode: TStateNode);
+    function FindTreeNode(aState: TStateNode): PVirtualNode;
   public
     procedure InitContent; override;
     procedure HandleMoveExecuted(Sender: TObject; aMove: TMove);
+    procedure HandleCursorChange(aNode: TStateNode); override;
 
     property StateManager: TStateManager read fStateManager write SetStateManager;
+    property OnNavigate: TNodeNavigateEvent read fOnNavigate write fOnNavigate;
   end;
 
 
@@ -54,7 +63,7 @@ end;
 procedure TStateFrame.SetStateManager(const Value: TStateManager);
 begin
   fStateManager := Value;
-  fStateManager.OnStateChange := HandleStateChange;
+//  fStateManager.OnStateChange := HandleStateChange; { !! removed in 3.4; reworked to OnCursorChange in Task 5 }
 end;
 
 procedure TStateFrame.HandleMoveExecuted(Sender: TObject; aMove: TMove);
@@ -91,6 +100,55 @@ begin
       Tree.ReinitNode(treeParent, True);
       Tree.InvalidateNode(treeParent);
     end;
+  end;
+end;
+
+function TStateFrame.FindTreeNode(aState: TStateNode): PVirtualNode;
+begin
+  Result := Tree.IterateSubtree(nil,
+    procedure(Sender: TBaseVirtualTree; Node: PVirtualNode; Data: Pointer; var Abort: Boolean)
+    var
+      nodeData: TStateNodeData;
+    begin
+      nodeData := Node.GetData<TStateNodeData>;
+      if nodeData.state = Data then
+        Abort := True;
+    end,
+    aState, []);
+end;
+
+procedure TStateFrame.HandleCursorChange(aNode: TStateNode);
+begin
+  if not Assigned(aNode) then
+  begin
+    Tree.ClearSelection;
+    Tree.FocusedNode := nil;
+    Exit;
+  end;
+
+  // make sure the root is present the first time through
+  if Tree.RootNodeCount = 0 then
+    Tree.RootNodeCount := 1;
+
+  // refresh the affected subtree so displayed structure matches the manager exactly
+  // (a follow-or-create may have sprouted a new child under the parent)
+  if Assigned(aNode.Parent) then
+  begin
+    var treeParent := FindTreeNode(aNode.Parent);
+    if Assigned(treeParent) then
+      Tree.ReinitNode(treeParent, True);
+  end
+  else
+    Tree.ReinitNode(nil, True);
+
+  // select the cursor node
+  var treeNode := FindTreeNode(aNode);
+  if Assigned(treeNode) then
+  begin
+    Tree.ClearSelection;
+    Tree.Selected[treeNode] := True;
+    Tree.FocusedNode := treeNode;
+    Tree.InvalidateNode(treeNode);
   end;
 end;
 
@@ -148,7 +206,27 @@ end;
 
 procedure TStateFrame.TreeNodeClick(Sender: TBaseVirtualTree; const HitInfo: THitInfo);
 begin
-  //
+  if not Assigned(HitInfo.HitNode) then
+    Exit;
+
+  var nodeData := HitInfo.HitNode.GetData<TStateNodeData>;
+  if Assigned(fOnNavigate) then
+    fOnNavigate(Self, nodeData.state);   // report only; the manager owns the cursor move
+end;
+
+procedure TStateFrame.TreeBeforeCellPaint(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
+  Node: PVirtualNode; Column: TColumnIndex; CellPaintMode: TVTCellPaintMode;
+  CellRect: TRect; var ContentRect: TRect);
+begin
+  if CellPaintMode <> cpmPaint then
+    Exit;
+
+  var nodeData := Node.GetData<TStateNodeData>;
+  if Assigned(nodeData.state) then
+  begin
+    TargetCanvas.Brush.Color := nodeData.state.Author.AsColor;
+    TargetCanvas.FillRect(CellRect);
+  end;
 end;
 
 end.
