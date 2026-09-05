@@ -24,7 +24,6 @@ uses
   u_Shufflers in 'engine\u_Shufflers.pas',
   u_MoveValidators in 'engine\u_MoveValidators.pas',
   u_TableDisplays in 'display\u_TableDisplays.pas',
-  u_GameDisplays in 'display\u_GameDisplays.pas',
   u_AnimationTypes in 'display\u_AnimationTypes.pas',
   u_Animations in 'display\u_Animations.pas',
   u_RenderUtils in 'display\u_RenderUtils.pas',

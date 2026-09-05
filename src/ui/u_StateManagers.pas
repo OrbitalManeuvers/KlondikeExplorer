@@ -35,7 +35,7 @@ type
   end;
 
 
-  TCursorChangeEvent = procedure(Sender: TObject; aNode: TStateNode) of object;
+  TCursorChangeEvent = procedure(Sender: TObject; aNode: TStateNode; aIsStep: Boolean) of object;
 
   TStateManager = class
   private
@@ -51,7 +51,7 @@ type
     fOnCursorChange: TCursorChangeEvent;
     function GetStateCount: Integer;
     procedure PopulateNode(aNode: TStateNode);
-    procedure SetCursorInternal(aNode: TStateNode);
+    procedure SetCursorInternal(aNode: TStateNode; aIsStep: Boolean);
     function CreateChild(aParent: TStateNode; aMoveIndex: Integer; aAuthor: TAuthor): TStateNode;
   public
     constructor Create(aSnapshotManager: TSnapshotManager);
@@ -66,10 +66,7 @@ type
     procedure LoadState(aNode: TStateNode; aTarget: TSnapshot);
 
     procedure SetCursor(aNode: TStateNode);
-    function CanNavigateUp: Boolean;
-    procedure NavigateUp;
-    procedure NavigateToChild(aChildIndex: Integer);
-    procedure ExecuteMoveAtCursor(aMoveIndex: Integer; aAuthor: TAuthor);
+    procedure ExecuteMoveAtCursor(aMoveIndex: Integer; aAuthor: TAuthor; aIsStep: Boolean = True);
     function FindAutoMoveAtCursor(aStackId: TStackId; aCardIndex: Integer;
       out aMove: TMove): Boolean;
 
@@ -178,7 +175,7 @@ begin
   PopulateNode(fRootNode);
 
   // seed the cursor at the root (also fires OnCursorChange once)
-  SetCursorInternal(fRootNode);
+  SetCursorInternal(fRootNode, False);
 end;
 
 function TStateManager.CreateChild(aParent: TStateNode; aMoveIndex: Integer; aAuthor: TAuthor): TStateNode;
@@ -205,13 +202,13 @@ begin
   PopulateNode(Result);
 end;
 
-procedure TStateManager.ExecuteMoveAtCursor(aMoveIndex: Integer; aAuthor: TAuthor);
+procedure TStateManager.ExecuteMoveAtCursor(aMoveIndex: Integer; aAuthor: TAuthor; aIsStep: Boolean);
 begin
   var existing := fCursor.ChildForMove(aMoveIndex);
   if Assigned(existing) then
-    SetCursorInternal(existing)                     // follow — no creation, no re-author
+    SetCursorInternal(existing, aIsStep)  // follow — no creation, no re-author
   else
-    SetCursorInternal(CreateChild(fCursor, aMoveIndex, aAuthor));  // authored once
+    SetCursorInternal(CreateChild(fCursor, aMoveIndex, aAuthor), aIsStep);  // authored once
 end;
 
 procedure TStateManager.ApplyState(aSource: TStateNode; aTarget: TTable);
@@ -232,30 +229,15 @@ end;
 
 procedure TStateManager.SetCursor(aNode: TStateNode);
 begin
-  SetCursorInternal(aNode);
+  if aNode <> fCursor then
+    SetCursorInternal(aNode, False);
 end;
 
-function TStateManager.CanNavigateUp: Boolean;
-begin
-  Result := Assigned(fCursor.Parent);
-end;
-
-procedure TStateManager.NavigateUp;
-begin
-  if CanNavigateUp then
-    SetCursor(fCursor.Parent);
-end;
-
-procedure TStateManager.NavigateToChild(aChildIndex: Integer);
-begin
-  SetCursor(fCursor.ChildNodes[aChildIndex]);
-end;
-
-procedure TStateManager.SetCursorInternal(aNode: TStateNode);
+procedure TStateManager.SetCursorInternal(aNode: TStateNode; aIsStep: Boolean);
 begin
   fCursor := aNode;
   if Assigned(fOnCursorChange) then
-    fOnCursorChange(Self, aNode);
+    fOnCursorChange(Self, aNode, aIsStep);
 end;
 
 function TStateManager.GetStateCount: Integer;

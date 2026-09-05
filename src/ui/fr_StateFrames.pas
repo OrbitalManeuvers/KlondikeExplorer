@@ -7,14 +7,14 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, fr_ContentFrames, Vcl.ExtCtrls,
   VirtualTrees, Vcl.StdCtrls,
 
-  u_Types, u_StateManagers, u_Authors;
+  u_Types, u_StateManagers, u_Authors, VirtualTrees.DrawTree;
 
 type
   TNodeNavigateEvent = procedure(Sender: TObject; aNode: TStateNode) of object;
 
   TStateFrame = class(TContentFrame)
     lblTitle: TLabel;
-    Tree: TVirtualStringTree;
+    StateTree: TVirtualDrawTree;
     procedure TreeInitNode(Sender: TBaseVirtualTree; ParentNode, Node: PVirtualNode;
       var InitialStates: TVirtualNodeInitStates);
     procedure TreeInitChildren(Sender: TBaseVirtualTree; Node: PVirtualNode;
@@ -25,9 +25,15 @@ type
     procedure TreeBeforeCellPaint(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
       Node: PVirtualNode; Column: TColumnIndex; CellPaintMode: TVTCellPaintMode;
       CellRect: TRect; var ContentRect: TRect);
+    procedure StateTreeDrawNode(Sender: TBaseVirtualTree; const PaintInfo: TVTPaintInfo);
+    procedure StateTreeMeasureItem(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
+      Node: PVirtualNode; var NodeHeight: Integer);
+    procedure StateTreeFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode;
+      Column: TColumnIndex);
   private
     fStateManager: TStateManager;
     fOnNavigate: TNodeNavigateEvent;
+    fUpdatingTree: Boolean;
     procedure SetStateManager(const Value: TStateManager);
     procedure HandleStateChange(Sender: TObject; ParentNode, ChildNode: TStateNode);
     function FindTreeNode(aState: TStateNode): PVirtualNode;
@@ -45,6 +51,8 @@ implementation
 
 {$R *.dfm}
 
+uses Vcl.Themes;
+
 type
   TStateNodeData = record
     state: TStateNode;
@@ -56,7 +64,7 @@ type
 procedure TStateFrame.InitContent;
 begin
   inherited;
-  Tree.NodeDataSize := SizeOf(TStateNodeData);
+  StateTree.NodeDataSize := SizeOf(TStateNodeData);
 
 end;
 
@@ -76,13 +84,13 @@ begin
   if ParentNode = nil then
   begin
     // new root node
-    Tree.RootNodeCount := 1;
-    Tree.Invalidate;
+    StateTree.RootNodeCount := 1;
+    StateTree.Invalidate;
   end
   else
   begin
     // otherwise the parent had a change in its children
-    var treeParent := Tree.IterateSubtree(nil,
+    var treeParent := StateTree.IterateSubtree(nil,
       procedure(Sender: TBaseVirtualTree; Node: PVirtualNode; Data: Pointer; var Abort: Boolean)
       var
         nodeData: TStateNodeData;
@@ -97,15 +105,15 @@ begin
 
     if Assigned(treeParent) then
     begin
-      Tree.ReinitNode(treeParent, True);
-      Tree.InvalidateNode(treeParent);
+      StateTree.ReinitNode(treeParent, True);
+      StateTree.InvalidateNode(treeParent);
     end;
   end;
 end;
 
 function TStateFrame.FindTreeNode(aState: TStateNode): PVirtualNode;
 begin
-  Result := Tree.IterateSubtree(nil,
+  Result := StateTree.IterateSubtree(nil,
     procedure(Sender: TBaseVirtualTree; Node: PVirtualNode; Data: Pointer; var Abort: Boolean)
     var
       nodeData: TStateNodeData;
@@ -121,34 +129,39 @@ procedure TStateFrame.HandleCursorChange(aNode: TStateNode);
 begin
   if not Assigned(aNode) then
   begin
-    Tree.ClearSelection;
-    Tree.FocusedNode := nil;
+    StateTree.ClearSelection;
+    StateTree.FocusedNode := nil;
     Exit;
   end;
 
-  // make sure the root is present the first time through
-  if Tree.RootNodeCount = 0 then
-    Tree.RootNodeCount := 1;
+  fUpdatingTree := True;
+  try
+    // make sure the root is present the first time through
+    if StateTree.RootNodeCount = 0 then
+      StateTree.RootNodeCount := 1;
 
-  // refresh the affected subtree so displayed structure matches the manager exactly
-  // (a follow-or-create may have sprouted a new child under the parent)
-  if Assigned(aNode.Parent) then
-  begin
-    var treeParent := FindTreeNode(aNode.Parent);
-    if Assigned(treeParent) then
-      Tree.ReinitNode(treeParent, True);
-  end
-  else
-    Tree.ReinitNode(nil, True);
+    // refresh the affected subtree so displayed structure matches the manager exactly
+    // (a follow-or-create may have sprouted a new child under the parent)
+    if Assigned(aNode.Parent) then
+    begin
+      var treeParent := FindTreeNode(aNode.Parent);
+      if Assigned(treeParent) then
+        StateTree.ReinitNode(treeParent, True);
+    end
+    else
+      StateTree.ReinitNode(nil, True);
 
-  // select the cursor node
-  var treeNode := FindTreeNode(aNode);
-  if Assigned(treeNode) then
-  begin
-    Tree.ClearSelection;
-    Tree.Selected[treeNode] := True;
-    Tree.FocusedNode := treeNode;
-    Tree.InvalidateNode(treeNode);
+    // select the cursor node
+    var treeNode := FindTreeNode(aNode);
+    if Assigned(treeNode) then
+    begin
+      StateTree.ClearSelection;
+      StateTree.Selected[treeNode] := True;
+      StateTree.FocusedNode := treeNode;
+      StateTree.InvalidateNode(treeNode);
+    end;
+  finally
+    fUpdatingTree := False;
   end;
 end;
 
@@ -212,6 +225,72 @@ begin
   var nodeData := HitInfo.HitNode.GetData<TStateNodeData>;
   if Assigned(fOnNavigate) then
     fOnNavigate(Self, nodeData.state);   // report only; the manager owns the cursor move
+end;
+
+procedure TStateFrame.StateTreeDrawNode(Sender: TBaseVirtualTree; const PaintInfo: TVTPaintInfo);
+var
+  nodeData: TStateNodeData;
+  canvas: TCanvas;
+  r, authorRect, textRect: TRect;
+  isSelected: Boolean;
+  nodeText: string;
+begin
+  nodeData := PaintInfo.Node.GetData<TStateNodeData>;
+  if not Assigned(nodeData.state) then
+    Exit;
+
+  canvas := PaintInfo.Canvas;
+  r := PaintInfo.ContentRect;
+  isSelected := vsSelected in PaintInfo.Node.States;
+
+  // Background
+  if isSelected then
+  begin
+    if StateTree.Focused then
+      canvas.Brush.Color := StateTree.Colors.FocusedSelectionColor
+    else
+      canvas.Brush.Color := StateTree.Colors.UnfocusedSelectionColor;
+    canvas.Font.Color := StateTree.Colors.SelectionTextColor;
+  end
+  else
+  begin
+    canvas.Brush.Color := StyleServices.GetSystemColor(clWindow);
+    canvas.Font.Color := StyleServices.GetSystemColor(clWindowText);
+  end;
+
+  canvas.FillRect(PaintInfo.CellRect);
+
+  // Author color bar indicator on the left
+  authorRect := Rect(r.Left, r.Top + 4, r.Left + 5, r.Bottom - 4);
+  canvas.Brush.Color := nodeData.state.Author.AsColor;
+  canvas.FillRect(authorRect);
+
+  // Node text
+  textRect := r;
+  textRect.Left := authorRect.Right + 8;
+  nodeText := Format('%s [ %g ]', [nodeData.state.Name, nodeData.state.HValue]);
+
+  canvas.Brush.Style := bsClear;
+  DrawText(canvas.Handle, PChar(nodeText), Length(nodeText), textRect,
+    DT_LEFT or DT_VCENTER or DT_SINGLELINE or DT_NOPREFIX);
+end;
+
+procedure TStateFrame.StateTreeFocusChanged(Sender: TBaseVirtualTree; Node: PVirtualNode;
+  Column: TColumnIndex);
+begin
+  if fUpdatingTree or (not Assigned(Node)) then
+    Exit;
+
+  var nodeData := Node.GetData<TStateNodeData>;
+  if Assigned(nodeData.state) and Assigned(fOnNavigate) then
+    fOnNavigate(Self, nodeData.state);
+end;
+
+procedure TStateFrame.StateTreeMeasureItem(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
+  Node: PVirtualNode; var NodeHeight: Integer);
+begin
+  NodeHeight := 30; // !!
+
 end;
 
 procedure TStateFrame.TreeBeforeCellPaint(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;

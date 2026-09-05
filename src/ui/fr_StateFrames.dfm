@@ -17,11 +17,11 @@ inherited StateFrame: TStateFrame
       Font.Style = [fsBold]
       ParentFont = False
     end
-    object Tree: TVirtualStringTree
-      Left = 8
-      Top = 31
-      Width = 265
-      Height = 439
+    object StateTree: TVirtualDrawTree
+      Left = 12
+      Top = 32
+      Width = 258
+      Height = 433
       Anchors = [akLeft, akTop, akRight, akBottom]
       Colors.BorderColor = 2697513
       Colors.DisabledColor = clGray
@@ -43,10 +43,11 @@ inherited StateFrame: TStateFrame
       Header.AutoSizeIndex = 0
       Header.MainColumn = -1
       TabOrder = 0
-      OnBeforeCellPaint = TreeBeforeCellPaint
-      OnGetText = TreeGetText
+      OnDrawNode = StateTreeDrawNode
+      OnFocusChanged = StateTreeFocusChanged
       OnInitChildren = TreeInitChildren
       OnInitNode = TreeInitNode
+      OnMeasureItem = StateTreeMeasureItem
       OnNodeClick = TreeNodeClick
       Touch.InteractiveGestures = [igPan, igPressAndTap]
       Touch.InteractiveGestureOptions = [igoPanSingleFingerHorizontal, igoPanSingleFingerVertical, igoPanInertia, igoPanGutter, igoParentPassthrough]

@@ -41,40 +41,26 @@ inherited TableFrame: TTableFrame
     object btnHint: TSpeedButton
       Left = 8
       Top = 8
-      Width = 50
+      Width = 68
       Height = 25
       Action = actHint
     end
-    object btnUndo: TSpeedButton
-      Left = 65
-      Top = 8
-      Width = 50
-      Height = 25
-      Caption = 'Undo'
-    end
-    object btnRedo: TSpeedButton
-      Left = 115
-      Top = 8
-      Width = 50
-      Height = 25
-      Caption = 'Redo'
-    end
     object btnSnapshot: TSpeedButton
-      Left = 320
+      Left = 230
       Top = 8
-      Width = 72
+      Width = 68
       Height = 25
       Action = actSnapshot
     end
     object btnRestart: TSpeedButton
-      Left = 243
+      Left = 156
       Top = 8
-      Width = 57
+      Width = 68
       Height = 25
       Action = actRestart
     end
     object btnComplete: TSpeedButton
-      Left = 171
+      Left = 82
       Top = 8
       Width = 68
       Height = 25

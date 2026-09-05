@@ -59,9 +59,7 @@ type
     StateFrame: TStateFrame;
     MoveFrame: TMoveFrame;
     function SnapshotLibraryFileName(): string;
-  //    procedure UpdateControls;
     procedure RestartTo(aSnapshot: TSnapshot);
-    procedure UpdateTableActions;
     procedure HandleSnapshotManagerChange(Sender: TObject);
     procedure HandleResetFrameRestart(Sender: TObject; NewState: TSnapshot);
     procedure HandleTableAction(Sender: TObject; aTableAction: TTableAction);
@@ -69,7 +67,7 @@ type
     procedure HandleMoveRequested(Sender: TObject; aRequestedMove: TMove; aRequestedAnimate: Boolean);
       procedure ProposeMove(Sender: TObject; const aMove: TMove; out aValid: Boolean; out aTargetCount: Integer);
 
-    procedure HandleCursorChange(Sender: TObject; aNode: TStateNode);
+    procedure HandleCursorChange(Sender: TObject; aNode: TStateNode; aIsStep: Boolean);
     procedure HandleMoveSelected(Sender: TObject; aMoveIndex: Integer);
     procedure HandleStateNavigate(Sender: TObject; aNode: TStateNode);
 
@@ -250,14 +248,7 @@ end;
 
 procedure TMainForm.HandleStateNavigate(Sender: TObject; aNode: TStateNode);
 begin
-  //
   StateManager.SetCursor(aNode);
-
-end;
-
-procedure TMainForm.UpdateTableActions;
-begin
-  TableFrame.ValidActions := [taHint, taRestart, taSnapshot];
 end;
 
 procedure TMainForm.ProposeMove(Sender: TObject; const aMove: TMove; out aValid: Boolean; out aTargetCount: Integer);
@@ -297,7 +288,7 @@ begin
   StateManager.ExecuteMoveAtCursor(moveIndex, auPlayer);
 end;
 
-procedure TMainForm.HandleCursorChange(Sender: TObject; aNode: TStateNode);
+procedure TMainForm.HandleCursorChange(Sender: TObject; aNode: TStateNode; aIsStep: Boolean);
 begin
   // currently: supplies MoveFrame and StateFrame
   for var f in ContentFrames do
@@ -305,8 +296,13 @@ begin
 
   // set up table view
   StateManager.LoadState(aNode, Snapshot);
-  TableFrame.ShowState(Snapshot, aNode.HValue);
-  UpdateTableActions;
+  if aIsStep and Assigned(aNode.Parent) then
+  begin
+    var move := aNode.Parent.Moves[aNode.ParentMoveIndex];
+    TableFrame.AnimateAndShowMove(move, Snapshot);
+  end
+  else
+    TableFrame.ShowState(Snapshot, aNode.HValue);
 end;
 
 procedure TMainForm.HandleMoveSelected(Sender: TObject; aMoveIndex: Integer);
@@ -315,13 +311,9 @@ begin
 
   var childNode := StateManager.Cursor.ChildForMove(aMoveIndex);
   if Assigned(childNode) then
-    StateManager.NavigateToChild(aMoveIndex)
-  else
   begin
     // todo: create move preview on table
   end;
-
-
 end;
 
 procedure TMainForm.HandleMoveRequested(Sender: TObject; aRequestedMove: TMove; aRequestedAnimate: Boolean);
@@ -330,9 +322,7 @@ begin
   var moveIndex := StateManager.Cursor.Moves.IndexOfMove(aRequestedMove);
 
   Assert(moveIndex <> -1); // this would need to be investigated
-  StateManager.ExecuteMoveAtCursor(moveIndex, auPlayer);
-
-
+  StateManager.ExecuteMoveAtCursor(moveIndex, auPlayer, aRequestedAnimate);
 end;
 
 procedure TMainForm.SaveSnapshotPrompt;
@@ -354,18 +344,12 @@ begin
   finally
     dlg.Free;
   end;
-
 end;
 
 function TMainForm.SnapshotLibraryFileName: string;
 begin
   Result := RuntimeFilePath('snapshot_library.json');
 end;
-
-//procedure TMainForm.UpdateControls;
-//begin
-// //
-//end;
 
 procedure TMainForm.actAboutExecute(Sender: TObject);
 begin

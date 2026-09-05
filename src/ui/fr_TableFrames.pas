@@ -8,7 +8,7 @@ uses
   Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.Buttons, Vcl.ControlList,
   System.Types, System.Skia, System.Actions, Vcl.ActnList, PngSpeedButton, Vcl.Skia,
 
-  u_Types, u_CardStacks, u_Tables, u_TableDisplays, u_GameDisplays,
+  u_Types, u_CardStacks, u_Tables, u_TableDisplays,
   u_Layouts, u_CardResources, u_Snapshots, u_MoveLists, u_AnimationTypes,
   fr_ContentFrames, u_SnapshotManagers;
 
@@ -37,8 +37,6 @@ type
     actAutoComplete: TAction;
     Toolbar: TPanel;
     btnHint: TSpeedButton;
-    btnUndo: TSpeedButton;
-    btnRedo: TSpeedButton;
     actSnapshot: TAction;
     btnSnapshot: TSpeedButton;
     btnRestart: TSpeedButton;
@@ -59,7 +57,7 @@ type
     procedure actSnapshotExecute(Sender: TObject);
 
   private
-    fDisplay: TGameDisplay;
+    fDisplay: TTableDisplay;
     fLayout: TLayout;
     fCardResources: TCardResources;
     fInitialState: TSnapshot;
@@ -81,8 +79,6 @@ type
     procedure HandleAnimationComplete(Sender: TObject; const Animation: IAnimation);
     procedure SetPreviewMode(const Value: Boolean);
 
-    procedure SetValidActions(const Value: TTableActions);
-
     procedure DoRequestMove(aMove: TMove; aAnimate: Boolean = True);
     procedure DoCardClick(aStackId: TStackId; aCardIndex: Integer);
     procedure DoAction(aAction: TTableAction);
@@ -92,10 +88,8 @@ type
 
     // 9/1 refactor
     procedure ShowState(aSnapshot: TSnapshot; aScore: Single); // standard update method
-    procedure AnimateAndShowMove(aBeginState, aEndState: TSnapshot; aMove: TMove);
+    procedure AnimateAndShowMove(aMove: TMove; aEndState: TSnapshot);
     procedure ShowHintMove(aMove: TMove);
-
-    property ValidActions: TTableActions write SetValidActions;
 
     property OnTableAction: TTableActionEvent read fOnTableAction write fOnTableAction;
     property OnMoveRequested: TMoveRequestedEvent read fOnMoveRequested write fOnMoveRequested;
@@ -126,12 +120,12 @@ end;
 
 { TTableFrame }
 
-procedure TTableFrame.InitContent;  // edit
+procedure TTableFrame.InitContent;
 begin
   // UI setup
   skTable.BackgroundColor := COLOR_TABLE_BK;
 
-  fDisplay := TGameDisplay.Create;
+  fDisplay := TTableDisplay.Create;
   fDisplay.OnAnimateComplete := HandleAnimationComplete;
   fCardResources := TCardResources.Create;
   TRenderUtils.SetResources(fCardResources);
@@ -145,7 +139,7 @@ begin
 
 end;
 
-procedure TTableFrame.DoneContent; // edit
+procedure TTableFrame.DoneContent;
 begin
   fDisplay.Free;
   fCardResources.Free;
@@ -155,85 +149,70 @@ begin
   inherited;
 end;
 
-procedure TTableFrame.actSnapshotExecute(Sender: TObject);  // remove. code goes in main
+procedure TTableFrame.actSnapshotExecute(Sender: TObject);
 begin
   DoAction(taSnapshot);
-
 end;
 
-procedure TTableFrame.AnimateAndShowMove(aBeginState, aEndState: TSnapshot; aMove: TMove); // new
+procedure TTableFrame.AnimateAndShowMove(aMove: TMove; aEndState: TSnapshot);
 begin
-  // this can be called before the previous animation has completed
-  fDisplay.Animation := nil;
-  // set up the animation state on a temporary display table so we don't mutate fTable
-  var displayTable: TTable;
-  var sourceCount: Integer;
-  var cards: TArray<TCard>;
-  displayTable := TTable.Create;
-  try
-    aBeginState.Restore(displayTable);
-    sourceCount := displayTable.Stacks[aMove.Source].Count; // capture before stealing shifts it
-    displayTable.Stacks[aMove.Source].GetLastCards(cards, aMove.Count, True);
-    // adjust face-up count to reflect the stolen cards (match drag behavior)
-    displayTable.Stacks[aMove.Source].FaceUpCount := Max(0, displayTable.Stacks[aMove.Source].FaceUpCount - aMove.Count);
-    fDisplay.UpdateTable(displayTable);
-  finally
-    displayTable.Free;
-  end;
+  fDisplay.CancelAnimation;
 
-  // save the end state so we can switch to it once the animation completes
+  // 1. Save target state to snap to when the animation finishes
   fPostAnimationState.Free;
   fPostAnimationState := TSnapshot.Create;
   fPostAnimationState.Assign(aEndState);
 
-  // create move anim
-  if Length(cards) > 0 then
+  // 2. Compute start and end coords using the current undisturbed fTable
+  var cards: TArray<TCard>;
+  fTable.Stacks[aMove.Source].GetLastCards(cards, aMove.Count, False);
+
+  var startPos := fLayout.Origins[aMove.Source];
+  var sourceCount := fTable.Stacks[aMove.Source].Count;
+
+  if StackIdToCategory(aMove.Source) = scTableau then
   begin
-    var startPos := fLayout.Origins[aMove.Source];
-    if StackIdToCategory(aMove.Source) = scTableau then
-    begin
-      var offset := fLayout.TableauCardY(sourceCount - aMove.Count);
-      startPos.Offset(0, offset);
-    end
-    else if aMove.Source = siWaste then
-    begin
-      var visIndex := Min(3, fTable.Waste.Count) - 1;
-      startPos.Offset(fLayout.WasteCardX(visIndex), 0);
-    end;
-
-    var endPos: TPointF := fLayout.Origins[aMove.Target];
-    if StackIdToCategory(aMove.Target) = scTableau then
-    begin
-      var offset := fLayout.TableauCardY(fTable.Stacks[aMove.Target].Count);
-      endPos.Offset(0, offset);
-    end;
-
-    var anim := CreateMoveAnimation(cards, startPos, endPos, TSizeF.Create(fLayout.CardWidth, fLayout.CardHeight));
-    fDisplay.Animation := anim;
-    anim.Start;
+    var offset := fLayout.TableauCardY(sourceCount - aMove.Count);
+    startPos.Offset(0, offset);
+  end
+  else if aMove.Source = siWaste then
+  begin
+    var visIndex := Min(3, fTable.Waste.Count) - 1;
+    startPos.Offset(fLayout.WasteCardX(visIndex), 0);
   end;
 
-end;
+  var endPos := fLayout.Origins[aMove.Target];
+  if StackIdToCategory(aMove.Target) = scTableau then
+  begin
+    var offset := fLayout.TableauCardY(fTable.Stacks[aMove.Target].Count);
+    endPos.Offset(0, offset);
+  end;
 
-procedure TTableFrame.ShowHintMove(aMove: TMove); // new
-begin
-  var anim := CreateHintAnimation(fTable, aMove, fLayout);
-  fDisplay.Animation := anim;
+  var anim := CreateMoveAnimation(cards, startPos, endPos, TSizeF.Create(fLayout.CardWidth, fLayout.CardHeight));
+
+  // 3. Start animation, telling the display to visually mask the moving cards
+  fDisplay.Animate(anim, aMove.Source, aMove.Count);
   anim.Start;
 end;
 
+procedure TTableFrame.ShowHintMove(aMove: TMove);
+begin
+  var anim := CreateHintAnimation(fTable, aMove, fLayout);
+  fDisplay.Animate(anim);
+  anim.Start;
+end;
 
-procedure TTableFrame.actAutoCompleteExecute(Sender: TObject); // ok
+procedure TTableFrame.actAutoCompleteExecute(Sender: TObject);
 begin
   DoAction(taComplete);
 end;
 
-procedure TTableFrame.actHintExecute(Sender: TObject); // ok/move code to main
+procedure TTableFrame.actHintExecute(Sender: TObject);
 begin
   DoAction(taHint);
 end;
 
-procedure TTableFrame.actRestartExecute(Sender: TObject); // ok
+procedure TTableFrame.actRestartExecute(Sender: TObject);
 begin
   DoAction(taRestart);
 end;
@@ -277,26 +256,13 @@ begin
   begin
     fPreviewMode := Value;
     fDisplay.PreviewMode := fPreviewMode;
-    if fPreviewMode then
-    begin
-      for var a in TableActions do
-        a.Enabled := False;
-    end;
-  end;
-end;
-
-procedure TTableFrame.SetValidActions(const Value: TTableActions); // keep
-begin
-  if not fPreviewMode then
-  begin
-    actHint.Enabled := taHint in Value;
-    actRestart.Enabled := taRestart in Value;
-    actSnapshot.Enabled := taSnapshot in Value;
+    for var a in TableActions do
+      a.Enabled := not fPreviewMode;
   end;
 end;
 
 procedure TTableFrame.skTableAnimationDraw(ASender: TObject; const ACanvas: ISkCanvas;
-  const ADest: TRectF; const AProgress: Double; const AOpacity: Single); // ok
+  const ADest: TRectF; const AProgress: Double; const AOpacity: Single);
 begin
   if Assigned(fDisplay) then
     fDisplay.Draw(aCanvas, fLayout);
@@ -320,11 +286,18 @@ begin
     fOnMoveRequested(Self, aMove, aAnimate);
 end;
 
-procedure TTableFrame.skTableMouseDown(Sender: TObject; Button: TMouseButton;   // ok
-  Shift: TShiftState; X, Y: Integer);
+procedure TTableFrame.skTableMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
   if fPreviewMode then
     Exit;
+
+  if Assigned(fPostAnimationState) then
+  begin
+    fDisplay.CancelAnimation;
+    fPostAnimationState.Restore(fTable);
+    FreeAndNil(fPostAnimationState);
+    fDisplay.UpdateTable(fTable);
+  end;
 
   fMouseDownPos := Point(X, Y);
   fMouseIsDown := True;
@@ -374,26 +347,6 @@ begin
     // build list of drag cards; fTable must stay untouched for hit-testing/validation
     fDragInfo.CardCount := fTable.Stacks[hitInfo.StackId].Count - hitInfo.CardIndex;
     fTable.Stacks[hitInfo.StackId].GetLastCards(fDragInfo.Cards, fDragInfo.CardCount, False);
-
-    // send a scratch copy (with the dragged cards removed) to the display
-    var dragTable := TTable.Create;
-    try
-      var snapshot := TSnapshot.Create;
-      try
-        snapshot.Capture(fTable);
-        snapshot.Restore(dragTable);
-      finally
-        snapshot.Free;
-      end;
-
-      var discard: TArray<TCard>;
-      dragTable.Stacks[hitInfo.StackId].GetLastCards(discard, fDragInfo.CardCount, True);
-      dragTable.Stacks[hitInfo.StackId].FaceUpCount := dragTable.Stacks[hitInfo.StackId].FaceUpCount - fDragInfo.CardCount;
-
-      fDisplay.UpdateTable(dragTable);
-    finally
-      dragTable.Free;
-    end;
 
     // fall through ...
   end;
@@ -482,7 +435,7 @@ begin
       var homePos := PointF(fMouseDownPos.X - fDragInfo.GrabOffset.X, fMouseDownPos.Y - fDragInfo.GrabOffset.Y);
       var anim := CreateFlybackAnimation(fDragInfo.Cards, dropPos, homePos,
         TSizeF.Create(fLayout.CardWidth, fLayout.CardHeight));
-      fDisplay.Animation := anim;
+      fDisplay.Animate(anim, fDragInfo.SourceStack, fDragInfo.CardCount);
       anim.Start;
     end;
 
