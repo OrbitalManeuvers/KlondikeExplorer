@@ -34,7 +34,7 @@ begin
         end
         else if aTable.Waste.HasCards then
         begin
-          aMove := NewMove(siWaste, siStock, aTable.Waste.Count);
+          aMove := NewMove(siWaste, siStock, 0);
           Exit(True);
         end;
       end;
@@ -58,6 +58,10 @@ begin
             aMove := NewMove(siWaste, targetId, 1);
             Exit(True);
           end;
+        end
+        else
+        begin
+          aMove := NewMove(siWaste, siStock, 0);
         end;
       end;
 

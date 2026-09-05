@@ -11,6 +11,8 @@ type
     Cards: TArray<TCard>;
     CardSize: TSizeF;
     OutlineColor: TAlphaColor;
+    CardOffset: TPointF;   // per-card layout delta; (0, cy*frac) for a vertical run,
+                           // (WasteOffset, 0) for a horizontal draw fan
   end;
 
   TRenderUtils = class
@@ -234,7 +236,7 @@ begin
       DrawCard(aCanvas, aBundle.Cards[i], CardRect, True);
       if aOutlineOpacity > 0 then
         DrawCardHighlight(aCanvas, CardRect, aBundle.OutlineColor, aOutlineOpacity);
-      aWhere.Offset(0, aBundle.CardSize.cy * OFFSET_FRACTION);
+      aWhere.Offset(aBundle.CardOffset.X, aBundle.CardOffset.Y);
     end;
   finally
     aCanvas.Restore;

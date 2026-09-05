@@ -118,7 +118,11 @@ begin
   begin
     Result := 'Draw';
     if Count <> 3 then
-      Result := Result + ' ' + Count.ToString;
+      Result := Result + Count.ToString;
+  end
+  else if (Source = siWaste) and (Target = siStock) then
+  begin
+    Result := 'Recycle';
   end
   else
   begin

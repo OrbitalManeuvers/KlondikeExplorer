@@ -188,7 +188,15 @@ begin
     endPos.Offset(0, offset);
   end;
 
-  var anim := CreateMoveAnimation(cards, startPos, endPos, TSizeF.Create(fLayout.CardWidth, fLayout.CardHeight));
+  var cardSize := TSizeF.Create(fLayout.CardWidth, fLayout.CardHeight);
+
+  // a draw lands as a horizontal waste fan, not a vertical run, so it gets its own
+  // animation whose bundle fans in X by the waste spacing.
+  var anim: IAnimation;
+  if aMove.GetMoveType = mtDraw then
+    anim := CreateDrawAnimation(cards, startPos, endPos, cardSize, fLayout.WasteCardX(1))
+  else
+    anim := CreateMoveAnimation(cards, startPos, endPos, cardSize, PointF(0, fLayout.StackOffset));
 
   // 3. Start animation, telling the display to visually mask the moving cards
   fDisplay.Animate(anim, aMove.Source, aMove.Count);
@@ -434,7 +442,7 @@ begin
       var dropPos := PointF(mousePos.X - fDragInfo.GrabOffset.X, mousePos.Y - fDragInfo.GrabOffset.Y);
       var homePos := PointF(fMouseDownPos.X - fDragInfo.GrabOffset.X, fMouseDownPos.Y - fDragInfo.GrabOffset.Y);
       var anim := CreateFlybackAnimation(fDragInfo.Cards, dropPos, homePos,
-        TSizeF.Create(fLayout.CardWidth, fLayout.CardHeight));
+        TSizeF.Create(fLayout.CardWidth, fLayout.CardHeight), PointF(0, fLayout.StackOffset));
       fDisplay.Animate(anim, fDragInfo.SourceStack, fDragInfo.CardCount);
       anim.Start;
     end;

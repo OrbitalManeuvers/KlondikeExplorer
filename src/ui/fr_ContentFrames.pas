@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
 
-  u_SnapshotManagers, u_SnapshotLibraries, u_StateManagers, Vcl.ExtCtrls;
+  u_SnapshotManagers, u_SnapshotLibraries, u_StateManagers, u_Snapshots, Vcl.ExtCtrls;
 
 type
   TContentFrame = class(TFrame)
@@ -27,7 +27,8 @@ type
     procedure DoneContent; virtual;
 
     // cursor change notification (base does nothing; views override)
-    procedure HandleCursorChange(aNode: TStateNode); virtual;
+    // aSnapshot is the cursor's table already expanded by the main form
+    procedure HandleCursorChange(aNode: TStateNode; aSnapshot: TSnapshot); virtual;
   end;
   TContentFrameClass = class of TContentFrame;
 
@@ -55,7 +56,7 @@ begin
   //
 end;
 
-procedure TContentFrame.HandleCursorChange(aNode: TStateNode);
+procedure TContentFrame.HandleCursorChange(aNode: TStateNode; aSnapshot: TSnapshot);
 begin
   //
 end;

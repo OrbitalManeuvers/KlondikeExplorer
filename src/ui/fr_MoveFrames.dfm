@@ -41,24 +41,27 @@ inherited MoveFrame: TMoveFrame
         Left = 8
         Top = 3
         Width = 199
-        Height = 24
+        Height = -6
         Margins.Left = 8
         Align = alClient
         AutoSize = False
         Caption = 'move name'
         Layout = tlCenter
         ExplicitWidth = 122
+        ExplicitHeight = 24
       end
       object lblHValue: TLabel
         AlignWithMargins = True
-        Left = 213
+        Left = -32
         Top = 3
         Width = 24
-        Height = 17
+        Height = -6
         Margins.Right = 8
         Align = alRight
         Caption = '0.00'
         Layout = tlCenter
+        ExplicitLeft = 213
+        ExplicitHeight = 17
       end
     end
   end

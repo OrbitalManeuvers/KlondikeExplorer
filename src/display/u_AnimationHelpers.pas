@@ -18,9 +18,23 @@ type
     function Value: Single;
   end;
 
+// one-shot easing: shape a 0..1 progress into an eased 0..1 (settles at 1, unlike
+// TCycler which loops). eases the tail so motion decelerates into its resting spot.
+function EaseOutCubic(aT: Single): Single;
+
 implementation
 
 uses System.SysUtils;
+
+function EaseOutCubic(aT: Single): Single;
+begin
+  if aT <= 0 then
+    Exit(0);
+  if aT >= 1 then
+    Exit(1);
+  var inv := 1 - aT;
+  Result := 1 - (inv * inv * inv);
+end;
 
 { TCycler }
 

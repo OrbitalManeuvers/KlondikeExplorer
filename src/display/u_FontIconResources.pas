@@ -28,8 +28,14 @@ implementation
 uses System.UITypes, Vcl.GraphUtil,
   u_DisplayConsts;
 
+// "Casino" is a free font available on DAFONT, and the card symbols are approximately
+// 12 trillion times better than MS fonts
+{$define casino}
+
 const
-//  FONT_NAME = 'Arial';
+  FONT_SIZE = 100.0; // large size for good path precision
+
+{$ifdef segoe}
   FONT_NAME = 'Segoe UI';
   FONT_SIZE = 100.0; // large size for good path precision
 
@@ -39,6 +45,19 @@ const
     #$2663,  // Clubs
     #$2660   // Spades
   );
+{$endif}
+
+{$ifdef casino}
+  FONT_NAME = 'Casino';
+
+  SUIT_CHARS: array[TCardSuit] of Char = (
+    #$0031,  // Hearts
+    #$0032,  // Diamonds
+    #$0033,  // Clubs
+    #$0034   // Spades
+  );
+{$endif}
+
 
 { TFontIconResources }
 

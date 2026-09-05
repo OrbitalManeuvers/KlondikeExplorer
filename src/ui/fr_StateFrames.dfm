@@ -3,6 +3,7 @@ inherited StateFrame: TStateFrame
   ExplicitWidth = 284
   inherited pnlBackground: TPanel
     Width = 284
+    ExplicitTop = 0
     ExplicitWidth = 284
     object lblTitle: TLabel
       Left = 16
@@ -17,11 +18,27 @@ inherited StateFrame: TStateFrame
       Font.Style = [fsBold]
       ParentFont = False
     end
+    object btnShelve: TSpeedButton
+      Left = 16
+      Top = 33
+      Width = 73
+      Height = 25
+      Caption = 'Shelve'
+      OnClick = btnShelveClick
+    end
+    object btnUnshelve: TSpeedButton
+      Left = 96
+      Top = 33
+      Width = 73
+      Height = 25
+      Caption = 'Unshelve'
+      OnClick = btnUnshelveClick
+    end
     object StateTree: TVirtualDrawTree
       Left = 12
-      Top = 32
+      Top = 64
       Width = 258
-      Height = 433
+      Height = 401
       Anchors = [akLeft, akTop, akRight, akBottom]
       Colors.BorderColor = 2697513
       Colors.DisabledColor = clGray

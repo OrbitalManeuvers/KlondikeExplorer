@@ -267,8 +267,11 @@ begin
     taHint:
       begin
 //        var hintMove: TMove;
-//        if Game.GetNextHint(hintMove) then
-//          TableFrame.ShowHintMove(hintMove);
+//        hintMove.Source := siTableau7;
+//        hintMove.Target := siFoundation1;
+//        hintMove.Count := 1;
+////        if Game.GetNextHint(hintMove) then
+//        TableFrame.ShowHintMove(hintMove);
       end;
 
     taComplete: ;
@@ -290,12 +293,14 @@ end;
 
 procedure TMainForm.HandleCursorChange(Sender: TObject; aNode: TStateNode; aIsStep: Boolean);
 begin
+  // expand the token once here so content frames never need to touch tokens
+  StateManager.LoadState(aNode, Snapshot);
+
   // currently: supplies MoveFrame and StateFrame
   for var f in ContentFrames do
-    f.HandleCursorChange(aNode);
+    f.HandleCursorChange(aNode, Snapshot);
 
   // set up table view
-  StateManager.LoadState(aNode, Snapshot);
   if aIsStep and Assigned(aNode.Parent) then
   begin
     var move := aNode.Parent.Moves[aNode.ParentMoveIndex];

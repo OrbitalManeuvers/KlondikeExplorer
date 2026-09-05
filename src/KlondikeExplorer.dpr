@@ -63,7 +63,8 @@ uses
   u_StateManagers in 'ui\u_StateManagers.pas',
   d_SaveSnapshotDlg in 'ui\d_SaveSnapshotDlg.pas' {SaveSnapshotDlg},
   u_Authors in 'ui\u_Authors.pas',
-  u_AutoMovers in 'engine\u_AutoMovers.pas';
+  u_AutoMovers in 'engine\u_AutoMovers.pas',
+  u_MoveEvaluators in 'games\u_MoveEvaluators.pas';
 
 {$R *.res}
 
