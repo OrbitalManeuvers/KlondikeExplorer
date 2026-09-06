@@ -277,6 +277,7 @@ procedure TTableDisplay.CancelAnimation;
 begin
   fAnimation := nil;
   fMask.Active := False;
+  fMoveHighlight.Active := False;
 end;
 
 procedure TTableDisplay.ClearDragOverlay;
@@ -338,9 +339,9 @@ begin
   // steady pulse on both ends of the selected move; the caller (TTableFrame) has
   // already computed the rects, so the display stays layout-dumb here.
   TRenderUtils.DrawCardHighlight(aCanvas, fMoveHighlight.SourceRect,
-    TAlphaColors.Gold, fMovePulse.Value);
+    COLOR_BASIC_RED, fMovePulse.Value);
   TRenderUtils.DrawCardHighlight(aCanvas, fMoveHighlight.TargetRect,
-    TAlphaColors.Gold, fMovePulse.Value);
+    TAlphaColors.Lime, fMovePulse.Value);
 end;
 
 end.

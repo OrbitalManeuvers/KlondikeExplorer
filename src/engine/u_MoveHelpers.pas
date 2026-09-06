@@ -32,10 +32,12 @@ type
 
     constructor Create(aTable: TTable);
     destructor Destroy; override;
-    property Table: TTable read fTable;
-
-    property MoveCards: TList<TCard> read fMoveCards;
     procedure Load(const aMove: TMove);
+
+    function KingAvailable(): Boolean;    // caller should cache result per Load()
+
+    property Table: TTable read fTable;
+    property MoveCards: TList<TCard> read fMoveCards;
   end;
 
 
@@ -184,5 +186,27 @@ begin
   Self.Source.Stack.GetLastCards(fMoveCards, Self.MoveCount, False);
 end;
 
+function TMoveInfo.KingAvailable(): Boolean;
+begin
+  // a King on top of the waste can fill a space
+  if Table.Waste.HasCards and (Table.Waste.Last.Value = cvKing) then
+    Exit(True);
+
+  // ...or any face-up King in a tableau (other than the column we're emptying)
+  for var stackId := siTableau1 to siTableau7 do
+  begin
+    if stackId <> Source.Id then
+    begin
+      var pile := Table.Stacks[stackId];
+      if pile.IsEmpty then
+        Continue;
+      for var idx := pile.Count - pile.FaceUpCount to pile.Count - 1 do
+        if pile.Cards[idx].Value = cvKing then
+          Exit(True);
+    end;
+  end;
+
+  Result := False;
+end;
 
 end.

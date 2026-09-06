@@ -91,6 +91,9 @@ begin
   anim.fBundle.CardSize.cx := aLayout.CardWidth;
   anim.fBundle.CardSize.cy := aLayout.CardHeight;
   anim.fBundle.OutlineColor := COLOR_BASIC_RED;
+  // a tableau run cascades in Y; without this the whole bundle collapses onto one
+  // card and only the top card (e.g. the Queen of a K/Q run) is visible.
+  anim.fBundle.CardOffset := PointF(0, aLayout.StackOffset);
   aTable.Stacks[aMove.Source].GetLastCards(anim.fBundle.Cards, aMove.Count);
 
   Result := anim;

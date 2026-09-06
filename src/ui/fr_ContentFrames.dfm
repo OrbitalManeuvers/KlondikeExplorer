@@ -21,6 +21,5 @@ object ContentFrame: TContentFrame
     Locked = True
     ShowCaption = False
     TabOrder = 0
-    ExplicitTop = -32
   end
 end

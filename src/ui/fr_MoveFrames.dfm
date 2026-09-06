@@ -41,7 +41,7 @@ inherited MoveFrame: TMoveFrame
         Left = 45
         Top = 3
         Width = 162
-        Height = 24
+        Height = -6
         Margins.Left = 8
         Align = alClient
         AutoSize = False
@@ -49,13 +49,14 @@ inherited MoveFrame: TMoveFrame
         Layout = tlCenter
         ExplicitLeft = 80
         ExplicitWidth = 127
+        ExplicitHeight = 24
       end
       object lblHValue: TLabel
         AlignWithMargins = True
-        Left = 213
+        Left = -32
         Top = 3
         Width = 24
-        Height = 24
+        Height = -6
         Margins.Right = 8
         Align = alRight
         Caption = '0.00'
@@ -67,6 +68,7 @@ inherited MoveFrame: TMoveFrame
         ParentFont = False
         Layout = tlCenter
         StyleElements = [seClient, seBorder]
+        ExplicitLeft = 213
         ExplicitHeight = 17
       end
       object shHintStatus: TShape
@@ -74,7 +76,7 @@ inherited MoveFrame: TMoveFrame
         Left = 6
         Top = 6
         Width = 25
-        Height = 18
+        Height = -12
         Margins.Left = 6
         Margins.Top = 6
         Margins.Right = 6

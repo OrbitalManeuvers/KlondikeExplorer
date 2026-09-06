@@ -98,6 +98,10 @@ end;
 { TMainForm }
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
+
+  // !!!
+  RandSeed := 101; // this will come out
+
   InitialState := TSnapshot.Create;
 
   SnapshotManager := TSnapshotManager.Create;
@@ -147,57 +151,60 @@ end;
 procedure TMainForm.InitContentFrames;
 begin
   // LeftColumn
-  ResetFrame := TResetFrame.Create(Self, SnapshotManager, SnapshotLibrary);
+  ResetFrame := TResetFrame.Create(Self);
+  ContentFrames.Add(ResetFrame);
   ResetFrame.Align := alTop;
   ResetFrame.Parent := LeftColumn;
   ResetFrame.OnRestart := HandleResetFrameRestart;
-  ResetFrame.InitContent;
-  ContentFrames.Add(ResetFrame);
 
   LeftColumnSplitShape.Align := alTop;
   LeftColumnSplitShape.Brush.Color := StyleServices.GetSystemColor(clBtnShadow);
   LeftColumnBorderShape.Brush.Color := StyleServices.GetSystemColor(clBtnShadow);
 
   // CenterColumn
-  MoveFrame := TMoveFrame.Create(Self, SnapshotManager, SnapshotLibrary);
+  MoveFrame := TMoveFrame.Create(Self);
+  ContentFrames.Add(MoveFrame);
   MoveFrame.Align := alBottom;
   MoveFrame.Parent := CenterColumn;
-  MoveFrame.InitContent;
   MoveFrame.OnMoveSelected := HandleMoveSelected;
-  ContentFrames.Add(MoveFrame);
 
   HSplitter.Align := alBottom;
 
-  StateFrame := TStateFrame.Create(Self, SnapshotManager, SnapshotLibrary);
+  StateFrame := TStateFrame.Create(Self);
+  ContentFrames.Add(StateFrame);
   StateFrame.Align := alClient;
   StateFrame.Parent := CenterColumn;
-  StateFrame.InitContent;
   StateFrame.StateManager := StateManager;
   StateFrame.OnNavigate := HandleStateNavigate;
-  ContentFrames.Add(StateFrame);
 
   // RightColumn
-  GraphFrame := TGraphFrame.Create(Self, SnapshotManager, SnapshotLibrary);
+  GraphFrame := TGraphFrame.Create(Self);
+  ContentFrames.Add(GraphFrame);
   GraphFrame.Align := alBottom;
   GraphFrame.Parent := RightColumn;
-  GraphFrame.InitContent;
-  ContentFrames.Add(GraphFrame);
 
   RightColumnSplitShape.Brush.Color := StyleServices.GetSystemColor(clBtnShadow);
   RightColumnSplitShape.Align := alBottom;
 
-  TableFrame := TTableFrame.Create(Self, SnapshotManager, SnapshotLibrary);
+  TableFrame := TTableFrame.Create(Self);
+  ContentFrames.Add(TableFrame);
   TableFrame.Align := alClient;
   TableFrame.Parent := RightColumn;
-  TableFrame.InitContent;
-  TableFrame.PreviewMode := True;
-
   TableFrame.OnTableAction := HandleTableAction;
   TableFrame.OnMoveRequested := HandleMoveRequested;
   TableFrame.OnCardClick := HandleCardClick;
   TableFrame.OnProposeMove := ProposeMove;
 
-  ContentFrames.Add(TableFrame);
+  var logPath := RuntimeFilePath('');
+  for var frame in ContentFrames do
+  begin
+    frame.SnapshotManager := SnapshotManager;
+    frame.SnapshotLibrary := SnapshotLibrary;
+    frame.LogPath := logPath;
+    frame.InitContent;
+  end;
+
+  TableFrame.PreviewMode := True;
 
 end;
 

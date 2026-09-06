@@ -19,6 +19,8 @@ type
     rbSnapshot: TRadioButton;
     cbSnapshots: TComboBox;
     btnReset: TSpeedButton;
+    Label1: TLabel;
+    rgMethod: TRadioGroup;
     procedure MethodClick(Sender: TObject);
     procedure btnResetClick(Sender: TObject);
   private
@@ -34,7 +36,8 @@ implementation
 
 {$R *.dfm}
 
-uses u_DealCreators, u_SolvableDealCreators;
+uses System.IOUtils,
+  u_DealCreators, u_SolvableDealCreators;
 
 { TResetFrame }
 
@@ -55,13 +58,14 @@ end;
 
 procedure TResetFrame.MethodClick(Sender: TObject);
 begin
-  //
   UpdateControls;
 end;
 
 procedure TResetFrame.UpdateControls;
 begin
   cbSnapshots.Enabled := rbSnapshot.Checked;
+  rgMethod.Enabled := rbSolvable.Checked;
+
   btnReset.Enabled := Assigned(fOnRestart);
 end;
 
@@ -69,16 +73,49 @@ procedure TResetFrame.btnResetClick(Sender: TObject);
 begin
   var newState := TSnapshot.Create;
   try
-    if rbRandom.Checked then
-    begin
-      TRandomDealCreator.CreateState(newState);
-      fOnRestart(Self, newState);
-    end;
 
-    if rbSolvable.Checked then
+    if rbRandom.Checked or rbSolvable.Checked then
     begin
-      TForwardDealCreator.CreateState(newState);
-      fOnRestart(Self, newState);
+      // use random as the default
+      var creatorClass: TDealCreatorClass := nil;
+
+      if rbRandom.Checked then
+        creatorClass := TRandomDealCreator
+      else if rbSolvable.Checked then
+      begin
+        case rgMethod.ItemIndex of
+          0: creatorClass := TForwardDealCreator;
+          1: creatorClass := TReverseDealCreator;
+        end;
+      end;
+
+      Assert(Assigned(creatorClass));
+
+      var creator := creatorClass.Create;
+      try
+
+        try
+          creator.CreateState(newState);
+          fOnRestart(Self, newState);
+        except
+          on E: Exception do
+          begin
+            // save the creator's log if we have a LogFolder
+            if (Self.LogPath <> '') and TDirectory.Exists(Self.LogPath) then
+            begin
+              var fileName := TPath.Combine(Self.LogPath, 'solver_fail.txt');
+              creator.Log.SaveToFile(fileName);
+
+              raise;
+            end;
+
+          end;
+
+        end;
+
+      finally
+        creator.Free;
+      end;
     end;
 
     if rbSnapshot.Checked then

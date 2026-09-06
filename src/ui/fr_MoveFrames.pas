@@ -56,7 +56,7 @@ implementation
 {$R *.dfm}
 
 uses Vcl.Themes, System.Generics.Defaults,
-  u_MoveEvaluators, u_MoveValidators;
+  u_MoveEvaluators, u_MoveValidators, u_HintValidators;
 
 { TMoveFrame }
 
@@ -166,9 +166,12 @@ begin
     // evaluate the move for hint sorting
     fMoveInfo.Load(m);
 
-    row.Score := TMoveEvaluator.Score(fMoveInfo);
-    if row.Score <> 0 then
-      row.Caption := row.Caption + ' (' + row.Score.ToString + ')';
+    if THintValidator.IsValidHint(fMoveInfo) then
+    begin
+      row.Score := TMoveEvaluator.Score(fMoveInfo);
+      if row.Score <> 0 then
+        row.Caption := row.Caption + ' (' + row.Score.ToString + ')';
+    end;
 
     fRows.Add(row);
   end;

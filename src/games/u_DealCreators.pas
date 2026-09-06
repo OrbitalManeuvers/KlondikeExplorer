@@ -2,18 +2,24 @@ unit u_DealCreators;
 
 interface
 
-uses System.Generics.Collections,
+uses System.Classes, System.Generics.Collections,
   u_Types, u_Snapshots;
 
 type
   TDealCreator = class
+  private
+    fLog: TStrings;
   public
-    class procedure CreateState(aState: TSnapshot); virtual; abstract;
+    constructor Create;
+    destructor Destroy; override;
+    procedure CreateState(aState: TSnapshot); virtual; abstract;
+    property Log: TStrings read fLog;
   end;
   TDealCreatorClass = class of TDealCreator;
 
   TRandomDealCreator = class(TDealCreator)
-    class procedure CreateState(aState: TSnapshot); override;
+  public
+    procedure CreateState(aState: TSnapshot); override;
   end;
 
 implementation
@@ -22,10 +28,22 @@ uses System.SysUtils,
   u_Dealers, u_Shufflers, u_Tables, u_CardStacks;
 
 
+{ TDealCreator }
+
+constructor TDealCreator.Create;
+begin
+  inherited Create;
+  fLog := TStringList.Create(dupIgnore, False, False);
+end;
+
+destructor TDealCreator.Destroy;
+begin
+  fLog.Free;
+  inherited;
+end;
 
 { TRandomDealCreator }
-
-class procedure TRandomDealCreator.CreateState(aState: TSnapshot);
+procedure TRandomDealCreator.CreateState(aState: TSnapshot);
 begin
   var deck := TCardStack.Create;
   try
@@ -44,6 +62,7 @@ begin
     deck.Free;
   end;
 end;
+
 
 
 end.

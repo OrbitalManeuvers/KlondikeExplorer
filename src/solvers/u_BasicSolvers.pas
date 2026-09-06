@@ -7,7 +7,7 @@ uses System.Generics.Collections,
   u_MoveLists, u_CardStacks;
 
 type
-  TBasicSolver = class(TSolver)
+  TDFSSolver = class(TSolver)
   private
     fTable: TTable;
     fVisited: THashSet<string>;
@@ -45,9 +45,9 @@ uses System.Generics.Defaults,
   u_Dealers, u_Heuristics, u_MoveGenerators, u_MoveValidators,
   u_MoveExecutors;
 
-{ TBasicSolver }
+{ TDFSSolver }
 
-constructor TBasicSolver.Create;
+constructor TDFSSolver.Create;
 begin
   inherited Create;
   fTable := TTable.Create;
@@ -57,7 +57,7 @@ begin
   fMoveStack := TList<TMove>.Create;
 end;
 
-destructor TBasicSolver.Destroy;
+destructor TDFSSolver.Destroy;
 begin
   fMoveStack.Free;
   fVisited.Free;
@@ -67,7 +67,7 @@ begin
   inherited;
 end;
 
-function TBasicSolver.Solve(InitialState: TSnapshot): TSolverOutcome;
+function TDFSSolver.Solve(InitialState: TSnapshot): TSolverOutcome;
 begin
   Result := Default(TSolverOutcome);
 
@@ -99,7 +99,7 @@ begin
   Result.MaxDepthReached := fMaxDepth;
 end;
 
-function TBasicSolver.IsSolved(aTable: TTable): Boolean;
+function TDFSSolver.IsSolved(aTable: TTable): Boolean;
 begin
   Result := True;
   for var suit := Low(TCardSuit) to High(TCardSuit) do
@@ -107,7 +107,7 @@ begin
       Exit(False);
 end;
 
-function TBasicSolver.DoSearch(aTable: TTable): Boolean;
+function TDFSSolver.DoSearch(aTable: TTable): Boolean;
 begin
   Inc(fNodesExplored);
   if fDepth > fMaxDepth then
@@ -174,7 +174,7 @@ begin
   Result := False;
 end;
 
-procedure TBasicSolver.SortMoves(aTable: TTable; aMoveList: TMoveList; var Sorted: TArray<TMove>);
+procedure TDFSSolver.SortMoves(aTable: TTable; aMoveList: TMoveList; var Sorted: TArray<TMove>);
 type
   TScoredMove = record
     MoveIndex: Integer;

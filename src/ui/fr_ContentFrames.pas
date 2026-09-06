@@ -14,13 +14,15 @@ type
   private
     fSnapshotManager: TSnapshotManager;
     fSnapshotLibrary: TSnapshotLibrary;
+    fLogPath: string;
   protected
-    property SnapshotManager: TSnapshotManager read fSnapshotManager;
-    property SnapshotLibrary: TSnapshotLibrary read fSnapshotLibrary;
+//    property SnapshotManager: TSnapshotManager read fSnapshotManager;
+//    property SnapshotLibrary: TSnapshotLibrary read fSnapshotLibrary;
+//    property LogPath: string read fLogPath;
   public
-    // globally owned resources usable by content frames
-    constructor Create(AOwner: TComponent; ASnapshotManager: TSnapshotManager;
-      ASnapshotLibrary: TSnapshotLibrary); reintroduce; overload;
+//    // globally owned resources usable by content frames
+//    constructor Create(AOwner: TComponent; ASnapshotManager: TSnapshotManager;
+//      ASnapshotLibrary: TSnapshotLibrary; const aLogPath: string); reintroduce; overload;
 
     // lifetime resource mgmt
     procedure InitContent; virtual;
@@ -29,6 +31,11 @@ type
     // cursor change notification (base does nothing; views override)
     // aSnapshot is the cursor's table already expanded by the main form
     procedure HandleCursorChange(aNode: TStateNode; aSnapshot: TSnapshot); virtual;
+
+    property SnapshotManager: TSnapshotManager read fSnapshotManager write fSnapshotManager;
+    property SnapshotLibrary: TSnapshotLibrary read fSnapshotLibrary write fSnapshotLibrary;
+    property LogPath: string read fLogPath write fLogPath;
+
   end;
   TContentFrameClass = class of TContentFrame;
 
@@ -38,13 +45,14 @@ implementation
 
 { TContentFrame }
 
-constructor TContentFrame.Create(AOwner: TComponent;
-  ASnapshotManager: TSnapshotManager; ASnapshotLibrary: TSnapshotLibrary);
-begin
-  inherited Create(AOwner);
-  fSnapshotManager := ASnapshotManager;
-  fSnapshotLibrary := ASnapshotLibrary;
-end;
+//constructor TContentFrame.Create(AOwner: TComponent;
+//  ASnapshotManager: TSnapshotManager; ASnapshotLibrary: TSnapshotLibrary; const ALogPath: string);
+//begin
+//  inherited Create(AOwner);
+//  fSnapshotManager := ASnapshotManager;
+//  fSnapshotLibrary := ASnapshotLibrary;
+//  fLogPath := ALogPath;
+//end;
 
 procedure TContentFrame.InitContent;
 begin
@@ -58,7 +66,7 @@ end;
 
 procedure TContentFrame.HandleCursorChange(aNode: TStateNode; aSnapshot: TSnapshot);
 begin
-  //
+  // descendants can override as needed
 end;
 
 
