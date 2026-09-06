@@ -14,7 +14,6 @@ type
     mfInfoReveal,         // uncovers a face-down tableau card
     mfUsefulSpace,        // empties a column while a King is waiting to use it
     mfKingToEmptyTableau, // parks a King in an empty column
-    mfUnburiesAce,        // reveals or plays an Ace a foundation still needs
     mfWasteRelief,        // moves a card off the waste onto a tableau
     mfBookkeeping         // stock/waste mgmt
   );
@@ -45,9 +44,8 @@ const
     4,  // mfInfoReveal
     2,  // mfUsefulSpace  (only ever counts when a King can use the space)
     3,  // mfKingToEmptyTableau
-    3,  // mfUnburiesAce
     2,  // mfWasteRelief
-    1
+    1   // mfBookkeeping
   );
 
 { TMoveEvaluator }
@@ -77,10 +75,14 @@ class function TMoveEvaluator.Classify(aMoveInfo: TMoveInfo): TMoveFeatures;
 begin
   Result := [];
 
-  // -- sometimes required, let them through as a hint --
+  // a stock/waste cycle move is only ever bookkeeping - it can't meaningfully earn
+  // any tableau/foundation/waste feature, so classify and bail. this also prevents
+  // downstream features from misfiring on a draw (e.g. an Ace turning up on the waste).
   if aMoveInfo.MoveType in [mtDraw, mtRecycle] then
+  begin
     Include(Result, mfBookkeeping);
-
+    Exit;
+  end;
 
   // --- immediate progress: anything reaching a foundation ---
   if aMoveInfo.MoveType in [mtWasteToFoundation, mtTableauToFoundation] then
@@ -124,27 +126,6 @@ begin
     else if (aMoveInfo.MoveCount = source.FaceUpCount)
       and (source.Count - source.FaceUpCount > 0) then
       Include(Result, mfInfoReveal);
-  end;
-
-  // --- unburies an ace: only worth rewarding while a foundation still wants one ---
-  // covers two shapes:
-  //   * playing an Ace up (the move's bottom card is an Ace headed home)
-  //   * revealing an Ace that was sitting face-down directly under the moved run
-  if aMoveInfo.MoveCards.Count > 0 then
-  begin
-    var bottom := aMoveInfo.MoveCards[0];
-    if (bottom.Value = cvAce)
-      and (aMoveInfo.NextFoundation[bottom.Suit] = cvAce) then
-      Include(Result, mfUnburiesAce);
-  end;
-
-  if mfInfoReveal in Result then
-  begin
-    var source := aMoveInfo.Source.Stack;
-    var revealed := source.Cards[source.Count - source.FaceUpCount - 1];
-    if (revealed.Value = cvAce)
-      and (aMoveInfo.NextFoundation[revealed.Suit] = cvAce) then
-      Include(Result, mfUnburiesAce);
   end;
 
   // --- enables foundation: the card this move newly exposes can go straight home ---

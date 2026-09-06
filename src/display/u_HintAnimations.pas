@@ -20,7 +20,12 @@ uses System.Types, System.UITypes, System.Skia, System.Math,
 const
   FADE_IN_MS = 300;
   MOVE_MS = 500;
-  FADE_OUT_MS = 800;
+  FADE_OUT_MS = 400;
+
+  // stationary draw hint: pulse a highlight on the stock (fade in, hold, fade out)
+  HL_FADE_IN_MS = 200;
+  HL_HOLD_MS = 600;
+  HL_FADE_OUT_MS = 200;
 
 type
   THintAnimation = class(TAnimation)
@@ -34,8 +39,32 @@ type
     EndPos: TPointF;
   end;
 
+  THighlightAnimation = class(TAnimation)
+  protected
+    function GetDuration: Cardinal; override;
+    procedure Draw(aCanvas: ISkCanvas); override;
+  public
+    Rect: TRectF;           // where to draw the highlight
+    Color: TAlphaColor;
+  end;
+
+
+// a draw hint doesn't move anything - the only action is "click the stock", so we
+// just pulse a highlight on the stock pile in place.
+function CreateDrawHintAnimation(const aLayout: TLayout): IAnimation;
+begin
+  var anim := THighlightAnimation.Create;
+  anim.Rect := aLayout.CardRect(aLayout.Origins[siStock]);
+  anim.Color := COLOR_BASIC_RED;
+  Result := anim;
+end;
+
 function CreateHintAnimation(aTable: TTable; aMove: TMove; const aLayout: TLayout): IAnimation;
 begin
+  // draws are stationary - highlight the stock rather than sliding a card to the waste
+  if aMove.GetMoveType = mtDraw then
+    Exit(CreateDrawHintAnimation(aLayout));
+
   var anim := THintAnimation.Create;
 
   anim.StartPos := aLayout.Origins[aMove.Source];
@@ -108,6 +137,33 @@ end;
 function THintAnimation.GetDuration: Cardinal;
 begin
   Result := FADE_IN_MS + FADE_OUT_MS + MOVE_MS;
+end;
+
+{ THighlightAnimation }
+
+procedure THighlightAnimation.Draw(aCanvas: ISkCanvas);
+var
+  elapsed: Int64;
+  opacity: Single;
+begin
+  elapsed := Self.Elapsed;
+
+  if elapsed < HL_FADE_IN_MS then
+    // fade in
+    opacity := elapsed / HL_FADE_IN_MS
+  else if elapsed < HL_FADE_IN_MS + HL_HOLD_MS then
+    // hold at full
+    opacity := 1.0
+  else
+    // fade out
+    opacity := 1.0 - Min((elapsed - HL_FADE_IN_MS - HL_HOLD_MS) / HL_FADE_OUT_MS, 1.0);
+
+  TRenderUtils.DrawCardHighlight(aCanvas, Rect, Color, opacity);
+end;
+
+function THighlightAnimation.GetDuration: Cardinal;
+begin
+  Result := HL_FADE_IN_MS + HL_HOLD_MS + HL_FADE_OUT_MS;
 end;
 
 end.

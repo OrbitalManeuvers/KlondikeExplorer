@@ -38,30 +38,53 @@ inherited MoveFrame: TMoveFrame
       OnItemClick = MovesListItemClick
       object lblMoveName: TLabel
         AlignWithMargins = True
-        Left = 8
+        Left = 45
         Top = 3
-        Width = 199
-        Height = -6
+        Width = 162
+        Height = 24
         Margins.Left = 8
         Align = alClient
         AutoSize = False
         Caption = 'move name'
         Layout = tlCenter
-        ExplicitWidth = 122
-        ExplicitHeight = 24
+        ExplicitLeft = 80
+        ExplicitWidth = 127
       end
       object lblHValue: TLabel
         AlignWithMargins = True
-        Left = -32
+        Left = 213
         Top = 3
         Width = 24
-        Height = -6
+        Height = 24
         Margins.Right = 8
         Align = alRight
         Caption = '0.00'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWhite
+        Font.Height = -13
+        Font.Name = 'Segoe UI'
+        Font.Style = []
+        ParentFont = False
         Layout = tlCenter
-        ExplicitLeft = 213
+        StyleElements = [seClient, seBorder]
         ExplicitHeight = 17
+      end
+      object shHintStatus: TShape
+        AlignWithMargins = True
+        Left = 6
+        Top = 6
+        Width = 25
+        Height = 18
+        Margins.Left = 6
+        Margins.Top = 6
+        Margins.Right = 6
+        Margins.Bottom = 6
+        Align = alLeft
+        Brush.Color = clMoneyGreen
+        Shape = stCircle
+        ExplicitLeft = 8
+        ExplicitTop = 0
+        ExplicitHeight = 25
       end
     end
   end

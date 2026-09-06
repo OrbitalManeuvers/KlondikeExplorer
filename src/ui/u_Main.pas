@@ -266,12 +266,10 @@ begin
   case aTableAction of
     taHint:
       begin
-//        var hintMove: TMove;
-//        hintMove.Source := siTableau7;
-//        hintMove.Target := siFoundation1;
-//        hintMove.Count := 1;
-////        if Game.GetNextHint(hintMove) then
-//        TableFrame.ShowHintMove(hintMove);
+        // MoveFrame owns the best-first, dud-free hint ring and its own cycle.
+        var hintMove: TMove;
+        if MoveFrame.NextHintMove(hintMove) then
+          TableFrame.ShowHintMove(hintMove);
       end;
 
     taComplete: ;
@@ -293,10 +291,14 @@ end;
 
 procedure TMainForm.HandleCursorChange(Sender: TObject; aNode: TStateNode; aIsStep: Boolean);
 begin
+  // moving the cursor invalidates any selected-move highlight
+  TableFrame.ClearMoveHighlight;
+
   // expand the token once here so content frames never need to touch tokens
   StateManager.LoadState(aNode, Snapshot);
 
-  // currently: supplies MoveFrame and StateFrame
+  // currently: supplies MoveFrame and StateFrame; MoveFrame rebuilds its hint ring
+  // and resets its own cycle here
   for var f in ContentFrames do
     f.HandleCursorChange(aNode, Snapshot);
 
@@ -312,13 +314,8 @@ end;
 
 procedure TMainForm.HandleMoveSelected(Sender: TObject; aMoveIndex: Integer);
 begin
-  // todo
-
-  var childNode := StateManager.Cursor.ChildForMove(aMoveIndex);
-  if Assigned(childNode) then
-  begin
-    // todo: create move preview on table
-  end;
+  // a selected move gets a steady highlight on the table until the cursor moves.
+  TableFrame.ShowMoveHighlight(StateManager.Cursor.Moves[aMoveIndex]);
 end;
 
 procedure TMainForm.HandleMoveRequested(Sender: TObject; aRequestedMove: TMove; aRequestedAnimate: Boolean);

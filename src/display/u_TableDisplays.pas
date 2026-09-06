@@ -12,6 +12,12 @@ type
     HideCount: Integer;
   end;
 
+  TMoveHighlight = record
+    Active: Boolean;
+    SourceRect: TRectF;
+    TargetRect: TRectF;
+  end;
+
   TDragOverlay = record
     Active: Boolean;
     Cards: TArray<TCard>;
@@ -39,12 +45,16 @@ type
     fDragOverlay: TDragOverlay;
     fDropTargetInfo: TDropTargetInfo;
     fOnAnimateComplete: TAnimateCompleteEvent;
+    fMoveHighlight: TMoveHighlight;
 
     fStockPulse: TCycler;
     fDropPulse: TCycler;
+    fMovePulse: TCycler;
     function GetHiddenCount(aStackId: TStackId): Integer;
     procedure RenderDragOverlay(aCanvas: ISkCanvas; const aLayout: TLayout);
     procedure RenderDropTarget(aCanvas: ISkCanvas; const aLayout: TLayout);
+    procedure RenderMoveHighlight(aCanvas: ISkCanvas; const aLayout: TLayout);
+    procedure SetMoveHighlight(const Value: TMoveHighlight);
 
   protected
     property Table: TTable read fTable;
@@ -72,6 +82,7 @@ type
     property OnAnimateComplete: TAnimateCompleteEvent read fOnAnimateComplete write fOnAnimateComplete;
 
     property PreviewMode: Boolean read fPreviewMode write fPreviewMode;
+    property MoveHighlight: TMoveHighlight read fMoveHighlight write SetMoveHighlight;
   end;
 
 implementation
@@ -90,6 +101,7 @@ begin
   fStopwatch := TStopwatch.Startnew;
   fStockPulse.Init(1000, 0.40, 0.99, fStopwatch);
   fDropPulse.Init(1000, 0.4, 0.99, Stopwatch);  // !! eliminate
+  fMovePulse.Init(1000, 0.30, 0.85, fStopwatch);
 end;
 
 destructor TTableDisplay.Destroy;
@@ -229,6 +241,9 @@ begin
     end;
   end;
 
+  if fMoveHighlight.Active then
+    RenderMoveHighlight(aCanvas, aLayout);
+
   if fDropTargetInfo.Active then
     RenderDropTarget(aCanvas, aLayout);
 
@@ -285,6 +300,12 @@ begin
   fDropTargetInfo.Position := aPos;
 end;
 
+procedure TTableDisplay.SetMoveHighlight(const Value: TMoveHighlight);
+begin
+  fMoveHighlight := Value;
+
+end;
+
 procedure TTableDisplay.ClearDropTarget;
 begin
   fDropTargetInfo.Active := False;
@@ -310,6 +331,16 @@ begin
   Bundle.OutlineColor := TAlphaColors.Coral;
   TRenderUtils.DrawCardBundle(aCanvas, Bundle, fDropTargetInfo.Position, 0.5,
     fDropPulse.Value);
+end;
+
+procedure TTableDisplay.RenderMoveHighlight(aCanvas: ISkCanvas; const aLayout: TLayout);
+begin
+  // steady pulse on both ends of the selected move; the caller (TTableFrame) has
+  // already computed the rects, so the display stays layout-dumb here.
+  TRenderUtils.DrawCardHighlight(aCanvas, fMoveHighlight.SourceRect,
+    TAlphaColors.Gold, fMovePulse.Value);
+  TRenderUtils.DrawCardHighlight(aCanvas, fMoveHighlight.TargetRect,
+    TAlphaColors.Gold, fMovePulse.Value);
 end;
 
 end.

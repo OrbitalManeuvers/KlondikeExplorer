@@ -91,6 +91,10 @@ type
     procedure AnimateAndShowMove(aMove: TMove; aEndState: TSnapshot);
     procedure ShowHintMove(aMove: TMove);
 
+    // steady highlight of a selected move (source run + target); persists until cleared
+    procedure ShowMoveHighlight(aMove: TMove);
+    procedure ClearMoveHighlight;
+
     property OnTableAction: TTableActionEvent read fOnTableAction write fOnTableAction;
     property OnMoveRequested: TMoveRequestedEvent read fOnMoveRequested write fOnMoveRequested;
     property OnCardClick: TCardClickEvent read fOnCardClick write fOnCardClick;
@@ -208,6 +212,46 @@ begin
   var anim := CreateHintAnimation(fTable, aMove, fLayout);
   fDisplay.Animate(anim);
   anim.Start;
+end;
+
+procedure TTableFrame.ShowMoveHighlight(aMove: TMove);
+begin
+  // middleman: turn a TMove into the two rects the display pulses. this is the same
+  // geometry AnimateAndShowMove uses, computed against the current displayed table.
+  var hl := Default(TMoveHighlight);
+  hl.Active := True;
+
+  // --- source: span the whole moving run (like a mid-tableau grab) ---
+  var srcOrigin := fLayout.Origins[aMove.Source];
+  var srcCount := fTable.Stacks[aMove.Source].Count;
+  if StackIdToCategory(aMove.Source) = scTableau then
+    srcOrigin.Offset(0, fLayout.TableauCardY(srcCount - aMove.Count))
+  else if aMove.Source = siWaste then
+  begin
+    var visIndex := Min(3, fTable.Waste.Count) - 1;
+    srcOrigin.Offset(fLayout.WasteCardX(visIndex), 0);
+  end;
+
+  hl.SourceRect := fLayout.CardRect(srcOrigin);
+  // extend the source rect down to cover every moved card in the cascade
+  if (StackIdToCategory(aMove.Source) = scTableau) and (aMove.Count > 1) then
+    hl.SourceRect.Bottom := hl.SourceRect.Bottom + fLayout.StackOffset * (aMove.Count - 1);
+
+  // --- target: the slot the cards would land on ---
+  var tgtOrigin := fLayout.Origins[aMove.Target];
+  if StackIdToCategory(aMove.Target) = scTableau then
+    tgtOrigin.Offset(0, fLayout.TableauCardY(fTable.Stacks[aMove.Target].Count));
+  hl.TargetRect := fLayout.CardRect(tgtOrigin);
+
+  // the paintbox animates continuously (OnAnimationDraw), so it picks this up next frame
+  fDisplay.MoveHighlight := hl;
+end;
+
+procedure TTableFrame.ClearMoveHighlight;
+begin
+  var hl := Default(TMoveHighlight);
+  hl.Active := False;
+  fDisplay.MoveHighlight := hl;
 end;
 
 procedure TTableFrame.actAutoCompleteExecute(Sender: TObject);
