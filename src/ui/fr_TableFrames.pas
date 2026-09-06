@@ -169,14 +169,18 @@ begin
 
   // 2. Compute start and end coords using the current undisturbed fTable
   var cards: TArray<TCard>;
-  fTable.Stacks[aMove.Source].GetLastCards(cards, aMove.Count, False);
+  var count := aMove.Count;
+  if (aMove.Source = siStock) and (aMove.Target = siWaste) then
+    count := Min(3, fTable.Stock.Count);
+  
+  fTable.Stacks[aMove.Source].GetLastCards(cards, count, False);
 
   var startPos := fLayout.Origins[aMove.Source];
   var sourceCount := fTable.Stacks[aMove.Source].Count;
 
   if StackIdToCategory(aMove.Source) = scTableau then
   begin
-    var offset := fLayout.TableauCardY(sourceCount - aMove.Count);
+    var offset := fLayout.TableauCardY(sourceCount - count);
     startPos.Offset(0, offset);
   end
   else if aMove.Source = siWaste then
@@ -203,7 +207,7 @@ begin
     anim := CreateMoveAnimation(cards, startPos, endPos, cardSize, PointF(0, fLayout.StackOffset));
 
   // 3. Start animation, telling the display to visually mask the moving cards
-  fDisplay.Animate(anim, aMove.Source, aMove.Count);
+  fDisplay.Animate(anim, aMove.Source, count);
   anim.Start;
 end;
 

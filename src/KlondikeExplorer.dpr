@@ -65,7 +65,8 @@ uses
   u_Authors in 'ui\u_Authors.pas',
   u_AutoMovers in 'engine\u_AutoMovers.pas',
   u_MoveEvaluators in 'games\u_MoveEvaluators.pas',
-  u_HintValidators in 'games\u_HintValidators.pas';
+  u_HintValidators in 'games\u_HintValidators.pas',
+  u_CardPools in 'solvers\u_CardPools.pas';
 
 {$R *.res}
 

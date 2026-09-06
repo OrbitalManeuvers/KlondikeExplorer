@@ -8,19 +8,21 @@ uses
   u_Types,
   u_Tables,
   u_CardHelpers,
-  u_MoveLists
+  u_MoveLists,
+  u_SolverTypes
   ;
 
 type
   TMoveGenerator = class
   public
     class procedure GenerateMoves(aTable: TTable; aList: TMoveList);
+    class procedure GenerateSolverMoves(aTable: TTable; aList: TList<TSolverMove>);
   end;
 
 implementation
 
 uses System.Math,
-  u_TableUtils, u_Utils;
+  u_TableUtils, u_Utils, u_CardPools;
 
 
 { TMoveGenerator }
@@ -40,7 +42,7 @@ begin
       mtDraw:
         begin
           if aTable.Stock.HasCards then
-            aList.Add(siStock, siWaste, Min(aTable.Stock.Count, 3));
+            aList.Add(siStock, siWaste, 0);
         end;
       mtRecycle:
         begin
@@ -121,5 +123,82 @@ begin
 
 end;
 
+class procedure TMoveGenerator.GenerateSolverMoves(aTable: TTable; aList: TList<TSolverMove>);
+var
+  source, target: TStackIterator;
+  sm: TSolverMove;
+  pool: TStockWastePool;
+  count: Integer;
+begin
+  // don't create moves for a stalemate board
+  if aTable.RecycleCount >= 3 then
+    Exit;
+
+  // tableau-to-tableau
+  source.Init(siTableau1, siTableau7);
+  repeat
+    if aTable.Stacks[source.Current].HasCards then
+    begin
+      target.Init(siTableau1, siTableau7);
+      repeat
+        if target.Current <> source.Current then
+        begin
+          for count := 1 to aTable.Stacks[source.Current].FaceUpCount do
+          begin
+            sm.Move := NewMove(source.Current, target.Current, count);
+            sm.DrawsBeforeRecycle1 := 0;
+            sm.DrawsAfterRecycle1 := 0;
+            sm.DrawsAfterRecycle2 := 0;
+            sm.RecycleCount := 0;
+            aList.Add(sm);
+          end;
+        end;
+      until not target.MoveNext;
+    end;
+  until not source.MoveNext;
+
+  // tableau-to-foundation
+  source.Init(siTableau1, siTableau7);
+  repeat
+    if aTable.Stacks[source.Current].HasCards then
+    begin
+      sm.Move := NewMove(source.Current, SuitToStackId(aTable.Stacks[source.Current].Last.Suit), 1);
+      sm.DrawsBeforeRecycle1 := 0;
+      sm.DrawsAfterRecycle1 := 0;
+      sm.DrawsAfterRecycle2 := 0;
+      sm.RecycleCount := 0;
+      aList.Add(sm);
+    end;
+  until not source.MoveNext;
+
+  // foundation-to-tableau
+  var atHome := 0;
+  for var s := Low(TCardSuit) to High(TCardSuit) do
+    Inc(atHome, aTable.Foundation[s].Count);
+  if atHome <> 52 then
+  begin
+    for var suit := Low(TCardSuit) to High(TCardSuit) do
+    begin
+      if aTable.Foundation[suit].HasCards and (aTable.Foundation[suit].Last.Value > cvTwo) then
+      begin
+        target.Init(siTableau1, siTableau7);
+        repeat
+          sm.Move := NewMove(SuitToStackId(suit), target.Current, 1);
+          sm.DrawsBeforeRecycle1 := 0;
+          sm.DrawsAfterRecycle1 := 0;
+          sm.DrawsAfterRecycle2 := 0;
+          sm.RecycleCount := 0;
+          aList.Add(sm);
+        until not target.MoveNext;
+      end;
+    end;
+  end;
+
+  // waste-derived moves: use pool scanner (this emits TSolverMove entries)
+  pool.Init(aTable);
+  pool.ScanReachableMoves(aTable, aList);
+end;
+
 end.
+
 

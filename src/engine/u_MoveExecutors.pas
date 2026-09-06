@@ -8,8 +8,8 @@ uses
   u_Types,
   u_Tables,
   u_CardHelpers,
-  u_CardStacks
-  ;
+  u_CardStacks,
+  u_SolverTypes;
 
 type
   TMoveExecutor = class
@@ -17,6 +17,7 @@ type
     class procedure UpdateFaceUp(const source, target: TCardStack; aMove: TMove);
   public
     class procedure ExecuteMove(aTable: TTable; aMove: TMove);
+    class procedure ExecuteSolverMove(aTable: TTable; aMove: TSolverMove);
   end;
 
 
@@ -37,7 +38,7 @@ begin
 
     mtDraw:
       begin
-        var moveCount := Min(aMove.Count, source.Count);
+        var moveCount := Min(3, source.Count);
         for var i := 1 to moveCount do
           target.Add(source._Pop);
       end;
@@ -72,6 +73,14 @@ begin
   end;
 
   UpdateFaceUp(source, target, aMove);
+end;
+
+class procedure TMoveExecutor.ExecuteSolverMove(aTable: TTable; aMove: TSolverMove);
+var
+  m: TMove;
+begin
+  for m in aMove.Unroll do
+    ExecuteMove(aTable, m);
 end;
 
 class procedure TMoveExecutor.UpdateFaceUp(const source, target: TCardStack; aMove: TMove);

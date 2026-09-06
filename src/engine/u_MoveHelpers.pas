@@ -9,6 +9,8 @@ type
   TMoveHelper = record helper for TMove
     function GetMoveType: TMoveType;
     function AsText: string;
+    class function CreateDraw: TMove; static;
+    class function CreateRecycle: TMove; static;
   end;
 
   // info about one "side" of a move
@@ -66,6 +68,22 @@ const
 
 
 { TMoveHelper }
+class function TMoveHelper.CreateDraw: TMove;
+begin
+  Result := Default(TMove);
+  Result.Source := siStock;
+  Result.Target := siWaste;
+  Result.Count := 0;
+end;
+
+class function TMoveHelper.CreateRecycle: TMove;
+begin
+  Result := Default(TMove);
+  Result.Source := siWaste;
+  Result.Target := siStock;
+  Result.Count := 0;
+end;
+
 function TMoveHelper.GetMoveType: TMoveType; // caller should cache
 var
   targetCat: TStackCategory;

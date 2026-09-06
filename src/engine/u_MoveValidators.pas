@@ -81,23 +81,13 @@ begin
     if not (i.Target.Category in LEGAL_MOVE_TARGETS[i.Source.Category]) then
       Exit;
 
+    // mtDraw does not encode count
+    if (i.MoveType = mtDraw) and (not i.Table.Stock.HasCards) then
+      Exit;
+
     // if the move involves a count, make sure the target has enough cards
-    if i.MoveCount > 0 then
-    begin
-      // mtDraw is validated against the stock count, since the stock is the source.
-      // a recycle is modeled as a separate move type and carries no card count.
-      if i.MoveType = mtDraw then
-      begin
-        if i.Table.Stock.Count < i.MoveCount then
-          Exit;
-      end
-      else
-      begin
-        // all other move types require that the count matches
-        if i.MoveCards.Count < i.MoveCount then
-          Exit;
-      end;
-    end;
+    if (i.MoveCount > 0) and (i.MoveCards.Count < i.MoveCount) then
+        Exit;
 
     // run target_rules
     var ruleClass := target_rules[i.Target.Category];
