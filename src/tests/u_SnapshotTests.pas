@@ -2,89 +2,89 @@ unit u_SnapshotTests;
 
 interface
 
-uses u_TestUnits;
+uses
+  DUnitX.TestFramework;
 
 type
-  TSnapshotTests = class(TTestUnit)
-  protected
-    function TestId: string; override;
-    procedure ExecuteTest; override;
+  TSnapshotTests = class
+  private
+  public
+    [Test]
+    procedure TestAsText;
   end;
 
 implementation
 
-uses System.SysUtils,
-  u_Types, u_CardStacks, u_Dealers, u_Shufflers;
+uses System.Classes, System.SysUtils,
+  u_Snapshots, u_Types, u_CardStacks, u_Dealers, u_Shufflers, u_Tables;
 
 { TSnapshotTests }
 
-procedure TSnapshotTests.ExecuteTest;
+procedure TSnapshotTests.TestAsText;
 begin
-  var deck := TCardStack.Create;
+
+  var table := TTable.Create;
   try
 
-    TDealer.PopulateNewDeck(deck);
-
-    // first deal
-    TShuffler.Shuffle(deck);
-    TDealer.Deal(deck, Table);
-
-    // save and log first
-    Snapshot.Capture(Table);
-    var beforeToken := SnapshotManager.Save(Snapshot);
+    var deck := TCardStack.Create;
     try
-      var before := Snapshot.AsText;
-      Log('before', before);
-
-      // mutate
       TDealer.PopulateNewDeck(deck);
+
+      // first deal
       TShuffler.Shuffle(deck);
       TDealer.Deal(deck, Table);
 
-      Snapshot.Capture(Table);
-      var during := Snapshot.AsText;
+      // capture the first snapshot
+      var originalState := TSnapshot.Create;
+      try
+        originalState.Capture(table);
+        var originalState_AsText := originalState.AsText;
 
-      if not SameStr(before, during) then
-      begin
-        Log('during', 'changed');
-        // restore the saved snapshot
-        SnapshotManager.Load(beforeToken, Snapshot);
-        Snapshot.Restore(Table);
+        // mutate the table
+        Assert.IsTrue(table.Tableau[7].Count = 7);
+        table.Tableau[7]._Cards.Exchange(1, 2);
+        table.RecycleCount := 1;
 
-        Snapshot.Capture(Table);
-        var after := Snapshot.AsText;
-        if SameStr(before, after) then
-          Log('after', after)
-        else
-          LogError('after_err: ' + after);
+        // capture the changed state
+        var changedState := TSnapshot.Create;
+        try
+          changedState.Capture(table);
+          var changedState_AsText := changedState.AsText;
 
+          // these two cannot be the same
+          Assert.AreNotEqual(originalState_AsText, changedState_AsText);
 
-      end
-      else
-      begin
-        LogError('Table mutation failure');
+          // but, if we restore the original ...
+          originalState.Restore(table);
+
+          // and recapture it
+          changedState.Capture(table);
+
+          // then they must be the same
+          changedState_AsText := changedState.AsText;
+          Assert.AreEqual(originalState_AsText, changedState_AsText);
+
+        finally
+          changedState.Free;
+        end;
+
+      finally
+        originalState.Free;
       end;
 
-
     finally
-      SnapshotManager.Delete(beforeToken);
+      deck.Free;
     end;
 
-
-
-    // log changed
-
-
-
   finally
-    deck.Free;
+    table.Free;
   end;
+
 end;
 
-function TSnapshotTests.TestId: string;
-begin
-  Result := 'Snapshots';
-end;
+
+initialization
+  TDUnitX.RegisterTestFixture(TSnapshotTests);
 
 
 end.

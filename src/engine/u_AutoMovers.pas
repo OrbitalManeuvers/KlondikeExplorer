@@ -29,7 +29,7 @@ begin
       begin
         if aTable.Stock.HasCards then
         begin
-          aMove := NewMove(siStock, siWaste, Min(3, aTable.Stock.Count));
+          aMove := NewMove(siStock, siWaste, 0);
           Exit(True);
         end
         else if aTable.Waste.HasCards then

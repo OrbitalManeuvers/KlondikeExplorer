@@ -33,7 +33,8 @@ type
     Token: TSnapshotToken;  // pooled state storage
     G: Integer;             // cost so far (move count)
     F: Single;              // g + h
-    Moves: TArray<TMove>;   // path from start
+    // TODO: A* still stores primitive TMove paths; TSolverMove is the newer compact action model.
+    Moves: TArray<TMove>;   // path from start; copying this array for every child is memory-heavy
   end;
 
 
@@ -73,6 +74,7 @@ var
   var
     bestIdx: Integer;
   begin
+    // TODO: This linear scan makes each extraction O(open-list size); use a priority queue for larger searches.
     bestIdx := 0;
     for var i := 1 to openList.Count - 1 do
       if openList[i].F < openList[bestIdx].F then
@@ -107,7 +109,7 @@ begin
 
     while openList.Count > 0 do
     begin
-      // check cancellation
+      // TODO: TSolver cancellation is not reset here, so a reused solver remains cancelled.
       if IsCancelled then
         Break;
 
@@ -144,17 +146,20 @@ begin
       if (Limits.MaxDepth > 0) and (current.G >= Limits.MaxDepth) then
         Continue;
 
-      // notify observer periodically
+      // TODO: Unlike DFS, this solver does not notify state visits or backtracking; only periodic progress is reported.
       if (fNodesExplored mod 1000) = 0 then
         NotifyProgress(fNodesExplored);
 
       // expand successors
       var moveList := TMoveList.Create;
       try
+        // TODO: Primitive expansion is complete but also searches every draw/recycle intermediate state;
+        // the newer TSolverMove pipeline avoids much of this branching at the cost of a harder equivalence proof.
         TMoveGenerator.GenerateMoves(fTable, moveList);
 
         for var i := 0 to moveList.Count - 1 do
         begin
+          // TODO: Cancellation is only checked once per expanded node, not while generating successors.
           if not TMoveValidator.IsValidMove(moveList[i], fTable) then
             Continue;
 
@@ -168,6 +173,7 @@ begin
           fSnapshot.Capture(fTable);
           var hash := fSnapshot.AsText;
 
+          // TODO: Closing states when generated prevents a later cheaper path from reopening them.
           if not fClosed.Contains(hash) then
           begin
             fClosed.Add(hash);

@@ -137,8 +137,8 @@ begin
   if Source = siStock then // it's a draw
   begin
     Result := 'Draw';
-    if Count <> 3 then
-      Result := Result + Count.ToString;
+    if Count <> 0 then
+      Result := Result + '-' + Count.ToString;
   end
   else if (Source = siWaste) and (Target = siStock) then
   begin
@@ -216,7 +216,7 @@ begin
     if stackId <> Source.Id then
     begin
       var pile := Table.Stacks[stackId];
-      if pile.IsEmpty then
+      if pile.IsEmpty or (pile.First.Value = cvKing) then
         Continue;
       for var idx := pile.Count - pile.FaceUpCount to pile.Count - 1 do
         if pile.Cards[idx].Value = cvKing then

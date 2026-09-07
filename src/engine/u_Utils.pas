@@ -13,7 +13,7 @@ function OppositeColor(aColor: TCardColor): TCardColor;
 { record initializers }
 function NewMove(aMove: TMove): TMove; overload;
 function NewMove(aSource, aTarget: TStackId; aCount: Integer): TMove; overload;
-function NewCard(aSuit: TCardSuit; aValue: TCardValue): TCard;
+function NewCard(aValue: TCardValue; aSuit: TCardSuit): TCard;
 function NewSeed(const Name: string; Value: Integer): TSeed;
 
 
@@ -63,7 +63,7 @@ begin
   Result.Count := aCount;
 end;
 
-function NewCard(aSuit: TCardSuit; aValue: TCardValue): TCard;
+function NewCard(aValue: TCardValue; aSuit: TCardSuit): TCard;
 begin
   Result := (Ord(aSuit) * (Ord(High(TCardValue)) + 1)) + Ord(aValue);
 end;
