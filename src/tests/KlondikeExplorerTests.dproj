@@ -115,6 +115,11 @@
         <DCCReference Include="u_TestUtils.pas"/>
         <DCCReference Include="..\engine\u_MoveExecutors.pas"/>
         <DCCReference Include="..\engine\u_MoveValidators.pas"/>
+        <DCCReference Include="..\solvers\u_CanonicalState.pas"/>
+        <DCCReference Include="u_CanonicalStateTests.pas"/>
+        <DCCReference Include="..\engine\u_MoveGenerators.pas"/>
+        <DCCReference Include="u_MoveGeneratorTests.pas"/>
+        <DCCReference Include="..\engine\u_MoveLists.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

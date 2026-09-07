@@ -178,11 +178,10 @@ begin
     pool.Init(Table);
     pool.ScanReachableMoves(Table, moves);
 
-    // King can go to any of 7 empty tableaus
-    Assert.AreEqual(7, moves.Count);
+    // King to empty tableau: all empty columns are equivalent, emit only one
+    Assert.AreEqual(1, moves.Count);
     Assert.AreEqual(1, moves[0].DrawsBeforeRecycle1);
     Assert.AreEqual(siWaste, moves[0].Move.Source);
-    // All targets should be tableaus
     Assert.IsTrue(moves[0].Move.Target in [siTableau1..siTableau7]);
   finally
     moves.Free;

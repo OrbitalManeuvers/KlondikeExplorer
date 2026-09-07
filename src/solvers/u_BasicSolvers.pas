@@ -3,13 +3,14 @@
 interface
 
 uses System.Generics.Collections,
-  u_Types, u_Tables, u_Snapshots, u_SnapshotManagers, u_SolverTypes, u_Solvers;
+  u_Types, u_Tables, u_Snapshots, u_SnapshotManagers, u_SolverTypes, u_Solvers,
+  u_CanonicalState;
 
 type
   TDFSSolver = class(TSolver)
   private
     fTable: TTable;
-    fVisited: THashSet<string>;
+    fVisited: THashSet<UInt64>;
     fSnapshots: TSnapshotManager;
     fSnapshot: TSnapshot;
     fNodesExplored: Cardinal;
@@ -52,7 +53,7 @@ constructor TDFSSolver.Create;
 begin
   inherited Create;
   fTable := TTable.Create;
-  fVisited := THashSet<string>.Create;
+  fVisited := THashSet<UInt64>.Create;
   fSnapshot := TSnapshot.Create;
   fSnapshots := TSnapshotManager.Create;
   fMoveStack := TList<TSolverMove>.Create;
@@ -148,11 +149,14 @@ begin
   end;
 
   fSnapshot.Capture(aTable);
-  var snap := fSnapshot.AsText;
-  if fVisited.Contains(snap) then
+
+  var canonical: TCanonicalState;
+  canonical.Capture(aTable);
+  var stateHash := canonical.Hash;
+  if fVisited.Contains(stateHash) then
     Exit(False);
 
-  fVisited.Add(snap);
+  fVisited.Add(stateHash);
 
   // notify observer of the new state being explored
   NotifyStateVisited(fDepth);

@@ -22,7 +22,6 @@ type
     actOpenGame: TFileOpen;
     actSaveGameAs: TFileSaveAs;
     actSaveGame: TAction;
-    actTests: TAction;
     actAbout: TAction;
     StatusBar: TStatusBar;
     actNewGame: TAction;
@@ -86,7 +85,7 @@ implementation
 {$R *.dfm}
 
 uses System.IOUtils, Vcl.Themes,
-  u_MoveValidators, d_SaveSnapshotDlg, u_Heuristics, u_Authors;
+  u_MoveValidators, d_SaveSnapshotDlg, u_Heuristics, u_Authors, d_About;
 
 
 { Utility }
@@ -362,7 +361,12 @@ end;
 
 procedure TMainForm.actAboutExecute(Sender: TObject);
 begin
-  //
+  var dlg := TAboutBox.Create(Application);
+  try
+    dlg.ShowModal;
+  finally
+    dlg.Free;
+  end;
 end;
 
 procedure TMainForm.actNewGameExecute(Sender: TObject);

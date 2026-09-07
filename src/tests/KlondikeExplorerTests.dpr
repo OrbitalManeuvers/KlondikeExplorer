@@ -29,7 +29,12 @@ uses
   u_SolverTypesTests in 'u_SolverTypesTests.pas',
   u_TestUtils in 'u_TestUtils.pas',
   u_MoveExecutors in '..\engine\u_MoveExecutors.pas',
-  u_MoveValidators in '..\engine\u_MoveValidators.pas';
+  u_MoveValidators in '..\engine\u_MoveValidators.pas',
+  u_CanonicalState in '..\solvers\u_CanonicalState.pas',
+  u_CanonicalStateTests in 'u_CanonicalStateTests.pas',
+  u_MoveGenerators in '..\engine\u_MoveGenerators.pas',
+  u_MoveGeneratorTests in 'u_MoveGeneratorTests.pas',
+  u_MoveLists in '..\engine\u_MoveLists.pas';
 
 var
   runner: ITestRunner;

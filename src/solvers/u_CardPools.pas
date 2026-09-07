@@ -55,6 +55,7 @@ var
   initialRecycle, allowedAdditional, currentRecycle: Integer;
   draws: array[0..2] of Integer;
   seen: THashSet<string>;
+  kingToEmptyDone: THashSet<TCard>;  // Kings already emitted to an empty tableau
   c: TCard;
   targetId: TStackId;
   sm: TSolverMove;
@@ -91,9 +92,20 @@ var
       targetId := tableau.Current;
       targetIsValid := False;
 
-      // king can only go to an empty tableau
+      // king can only go to an empty tableau — but all empty columns are
+      // equivalent, so emit only the first one per King across the
+      // entire scan (fewest draws/recycles wins).
       if card.Value = cvKing then
-        targetIsValid := aTable.Stacks[targetId].IsEmpty
+      begin
+        if aTable.Stacks[targetId].IsEmpty then
+        begin
+          if not kingToEmptyDone.Contains(card) then
+          begin
+            targetIsValid := True;
+            kingToEmptyDone.Add(card);
+          end;
+        end;
+      end
       else if aTable.Stacks[targetId].HasCards then
       begin
         targetTop := aTable.Stacks[targetId].Last;
@@ -129,6 +141,7 @@ begin
   stockList := TList<TCard>.Create;
   wasteList := TList<TCard>.Create;
   seen := THashSet<string>.Create;
+  kingToEmptyDone := THashSet<TCard>.Create;
   try
     // copy stacks (bottom..top)
     for i := 0 to aTable.Stock.Count - 1 do
@@ -190,6 +203,7 @@ begin
     stockList.Free;
     wasteList.Free;
     seen.Free;
+    kingToEmptyDone.Free;
   end;
 end;
 

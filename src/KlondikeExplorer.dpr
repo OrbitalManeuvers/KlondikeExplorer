@@ -43,11 +43,6 @@ uses
   u_Observers in 'solvers\u_Observers.pas',
   u_SolverTypes in 'solvers\u_SolverTypes.pas',
   u_BasicSolvers in 'solvers\u_BasicSolvers.pas',
-  u_LogTypes in 'tests\u_LogTypes.pas',
-  u_Logs in 'tests\u_Logs.pas',
-  u_TestRunners in 'tests\u_TestRunners.pas',
-  u_TestUnits in 'tests\u_TestUnits.pas',
-  u_SnapshotTests in 'tests\u_SnapshotTests.pas',
   u_SnapshotLibraries in 'ui\u_SnapshotLibraries.pas',
   u_HintGenerators in 'games\u_HintGenerators.pas',
   u_AStarSolvers in 'solvers\u_AStarSolvers.pas',
@@ -66,7 +61,8 @@ uses
   u_AutoMovers in 'engine\u_AutoMovers.pas',
   u_MoveEvaluators in 'games\u_MoveEvaluators.pas',
   u_HintValidators in 'games\u_HintValidators.pas',
-  u_CardPools in 'solvers\u_CardPools.pas';
+  u_CardPools in 'solvers\u_CardPools.pas',
+  d_About in 'ui\d_About.pas' {AboutBox};
 
 {$R *.res}
 

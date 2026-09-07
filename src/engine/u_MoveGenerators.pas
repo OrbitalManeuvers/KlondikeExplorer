@@ -152,12 +152,25 @@ begin
   repeat
     if aTable.Stacks[source.Current].HasCards then
     begin
+      var kingToEmptyEmitted := False;
       target.Init(siTableau1, siTableau7);
       repeat
         if target.Current <> source.Current then
         begin
           for count := 1 to aTable.Stacks[source.Current].FaceUpCount do
+          begin
+            // A king moving to an empty column: all empty columns are
+            // equivalent, so emit only the first one per source run.
+            var baseCard := aTable.Stacks[source.Current].Cards[
+              aTable.Stacks[source.Current].Count - count];
+            if (baseCard.Value = cvKing) and aTable.Stacks[target.Current].IsEmpty then
+            begin
+              if kingToEmptyEmitted then
+                Continue;
+              kingToEmptyEmitted := True;
+            end;
             AddBoardMove(NewMove(source.Current, target.Current, count));
+          end;
         end;
       until not target.MoveNext;
     end;
@@ -181,9 +194,21 @@ begin
     begin
       if aTable.Foundation[suit].HasCards and (aTable.Foundation[suit].Last.Value > cvTwo) then
       begin
+        var foundationKingToEmptyEmitted := False;
+        var isKing := aTable.Foundation[suit].Last.Value = cvKing;
         target.Init(siTableau1, siTableau7);
         repeat
-          AddBoardMove(NewMove(SuitToStackId(suit), target.Current, 1));
+          if isKing and aTable.Stacks[target.Current].IsEmpty then
+          begin
+            if not foundationKingToEmptyEmitted then
+            begin
+              foundationKingToEmptyEmitted := True;
+              AddBoardMove(NewMove(SuitToStackId(suit), target.Current, 1));
+            end;
+            // else skip duplicate king-to-empty
+          end
+          else
+            AddBoardMove(NewMove(SuitToStackId(suit), target.Current, 1));
         until not target.MoveNext;
       end;
     end;

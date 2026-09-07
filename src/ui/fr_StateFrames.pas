@@ -293,11 +293,7 @@ begin
   node.SetData(nodeData);
 
   if Assigned(nodeData.state) and (nodeData.state.ChildCount > 0) then
-  begin
     Include(InitialStates, ivsHasChildren);
-    if not (vsExpanded in node.States) then
-      Include(InitialStates, ivsExpanded);
-  end;
 end;
 
 procedure TStateFrame.TreeNodeClick(Sender: TBaseVirtualTree; const HitInfo: THitInfo);
@@ -341,7 +337,7 @@ begin
     canvas.Font.Color := StyleServices.GetSystemColor(clWindowText);
   end;
 
-  canvas.FillRect(PaintInfo.CellRect);
+  canvas.FillRect(PaintInfo.ContentRect);
 
   // Author color bar indicator on the left
   authorRect := Rect(r.Left, r.Top + 4, r.Left + 5, r.Bottom - 4);
@@ -389,7 +385,7 @@ begin
   if Assigned(nodeData.state) then
   begin
     TargetCanvas.Brush.Color := nodeData.state.Author.AsColor;
-    TargetCanvas.FillRect(CellRect);
+    TargetCanvas.FillRect(ContentRect);
   end;
 end;
 

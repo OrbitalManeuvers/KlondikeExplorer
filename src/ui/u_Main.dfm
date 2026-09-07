@@ -185,13 +185,6 @@ object MainForm: TMainForm
           item
             Items = <
               item
-                Action = actTests
-                Caption = '&Regression Tests...'
-              end
-              item
-                Caption = '-'
-              end
-              item
                 Action = actAbout
                 Caption = '&About...'
               end>
@@ -234,11 +227,6 @@ object MainForm: TMainForm
       Caption = 'Save Game'
       ShortCut = 16467
       OnExecute = actSaveGameExecute
-    end
-    object actTests: TAction
-      Category = 'Help'
-      Caption = 'Regression Tests...'
-      OnExecute = actTestsExecute
     end
     object actAbout: TAction
       Category = 'Help'

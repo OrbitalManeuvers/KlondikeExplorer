@@ -3,7 +3,6 @@ inherited StateFrame: TStateFrame
   ExplicitWidth = 284
   inherited pnlBackground: TPanel
     Width = 284
-    ExplicitTop = 0
     ExplicitWidth = 284
     object lblTitle: TLabel
       Left = 16
