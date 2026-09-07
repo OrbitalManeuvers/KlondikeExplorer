@@ -17,7 +17,7 @@ type
 
 implementation
 
-uses System.Classes,
+uses System.Classes, System.SysUtils,
   u_BasicSolvers, u_Tables, u_CardStacks, u_Dealers, u_MoveGenerators, u_MoveValidators,
   u_Shufflers, u_SolverTypes;
 
@@ -60,8 +60,7 @@ begin
       end;
 
       // failed MAX_ATTEMPTS
-
-
+      raise Exception.Create('MAX_ATTEMPTS reached');
 
     finally
       deck.Free;
@@ -70,7 +69,6 @@ begin
   finally
     table.Free;
   end;
-
 end;
 
 

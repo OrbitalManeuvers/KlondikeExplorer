@@ -145,6 +145,7 @@ procedure TTable.Clear;
 begin
   for var id := Low(TStackId) to High(TStackId) do
     fStacks[id].Clear;
+  fRecycleCount := 0;
   Change;
 end;
 

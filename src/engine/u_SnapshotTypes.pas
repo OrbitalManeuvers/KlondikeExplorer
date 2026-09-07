@@ -11,7 +11,10 @@ type
   end;
 
 const
-  SNAPSHOT_BUFFER_SIZE = (13 * 1) + 52; // 65 = 1-byte overhead for 13 stacks, plus 52 cards
+  SNAPSHOT_BUFFER_SIZE =
+    52 +  // 52 cards
+    13 +  // 13 stack face-up counts
+    1;    // 1 recycle counter
 
 type
   TSnapshotBuffer = array[0..SNAPSHOT_BUFFER_SIZE - 1] of Byte;

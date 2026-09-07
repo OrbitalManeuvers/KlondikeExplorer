@@ -22,7 +22,7 @@ type
 implementation
 
 uses System.Math,
-  u_TableUtils, u_Utils, u_CardPools;
+  u_TableUtils, u_Utils, u_CardPools, u_MoveValidators;
 
 
 { TMoveGenerator }
@@ -126,9 +126,22 @@ end;
 class procedure TMoveGenerator.GenerateSolverMoves(aTable: TTable; aList: TList<TSolverMove>);
 var
   source, target: TStackIterator;
-  sm: TSolverMove;
   pool: TStockWastePool;
   count: Integer;
+  procedure AddBoardMove(const aMove: TMove);
+  var
+    solverMove: TSolverMove;
+  begin
+    if TMoveValidator.IsValidMove(aMove, aTable) then
+    begin
+      solverMove.Move := aMove;
+      solverMove.DrawsBeforeRecycle1 := 0;
+      solverMove.DrawsAfterRecycle1 := 0;
+      solverMove.DrawsAfterRecycle2 := 0;
+      solverMove.RecycleCount := 0;
+      aList.Add(solverMove);
+    end;
+  end;
 begin
   // don't create moves for a stalemate board
   if aTable.RecycleCount >= 3 then
@@ -144,14 +157,7 @@ begin
         if target.Current <> source.Current then
         begin
           for count := 1 to aTable.Stacks[source.Current].FaceUpCount do
-          begin
-            sm.Move := NewMove(source.Current, target.Current, count);
-            sm.DrawsBeforeRecycle1 := 0;
-            sm.DrawsAfterRecycle1 := 0;
-            sm.DrawsAfterRecycle2 := 0;
-            sm.RecycleCount := 0;
-            aList.Add(sm);
-          end;
+            AddBoardMove(NewMove(source.Current, target.Current, count));
         end;
       until not target.MoveNext;
     end;
@@ -161,14 +167,8 @@ begin
   source.Init(siTableau1, siTableau7);
   repeat
     if aTable.Stacks[source.Current].HasCards then
-    begin
-      sm.Move := NewMove(source.Current, SuitToStackId(aTable.Stacks[source.Current].Last.Suit), 1);
-      sm.DrawsBeforeRecycle1 := 0;
-      sm.DrawsAfterRecycle1 := 0;
-      sm.DrawsAfterRecycle2 := 0;
-      sm.RecycleCount := 0;
-      aList.Add(sm);
-    end;
+      AddBoardMove(NewMove(source.Current,
+        SuitToStackId(aTable.Stacks[source.Current].Last.Suit), 1));
   until not source.MoveNext;
 
   // foundation-to-tableau
@@ -183,12 +183,7 @@ begin
       begin
         target.Init(siTableau1, siTableau7);
         repeat
-          sm.Move := NewMove(SuitToStackId(suit), target.Current, 1);
-          sm.DrawsBeforeRecycle1 := 0;
-          sm.DrawsAfterRecycle1 := 0;
-          sm.DrawsAfterRecycle2 := 0;
-          sm.RecycleCount := 0;
-          aList.Add(sm);
+          AddBoardMove(NewMove(SuitToStackId(suit), target.Current, 1));
         until not target.MoveNext;
       end;
     end;

@@ -100,6 +100,9 @@ begin
       stream.Write(cardByte);
     end;
   end;
+
+  // capture the current stock/waste recycle state
+  stream.Write(Byte(aTable.RecycleCount));
 end;
 
 procedure TSnapshot.Restore(aTable: TTable);
@@ -130,6 +133,9 @@ begin
     stack.FaceUpCount := faceUpCount;
 
   end;
+
+  // restore the current stock/waste recycle state
+  aTable.RecycleCount := stream.Read;
 end;
 
 procedure TSnapshot.Assign(aSource: TSnapshot);

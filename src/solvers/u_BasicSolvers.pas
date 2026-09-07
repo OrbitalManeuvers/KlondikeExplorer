@@ -3,8 +3,7 @@
 interface
 
 uses System.Generics.Collections,
-  u_Types, u_Tables, u_Snapshots, u_SnapshotManagers, u_SolverTypes, u_Solvers,
-  u_MoveLists, u_CardStacks;
+  u_Types, u_Tables, u_Snapshots, u_SnapshotManagers, u_SolverTypes, u_Solvers;
 
 type
   TDFSSolver = class(TSolver)
@@ -16,11 +15,13 @@ type
     fNodesExplored: Cardinal;
     fMaxDepth: Integer;
     fDepth: Integer;
-    fMoveStack: TList<TMove>;
+    fMoveStack: TList<TSolverMove>;
     fSolution: TArray<TMove>;
     function DoSearch(aTable: TTable): Boolean;
     function IsSolved(aTable: TTable): Boolean;
-    procedure SortMoves(aTable: TTable; aMoveList: TMoveList; var Sorted: TArray<TMove>);
+    function FlattenMoveStack: TArray<TMove>;
+    procedure SortMoves(aTable: TTable; aMoveList: TList<TSolverMove>;
+      var Sorted: TArray<TSolverMove>);
   public
     constructor Create;
     destructor Destroy; override;
@@ -42,7 +43,7 @@ Draw from stock / Reset waste (Usually the lowest priority unless stuck)
 implementation
 
 uses System.Generics.Defaults,
-  u_Dealers, u_Heuristics, u_MoveGenerators, u_MoveValidators,
+  u_Dealers, u_Heuristics, u_MoveGenerators,
   u_MoveExecutors;
 
 { TDFSSolver }
@@ -54,7 +55,7 @@ begin
   fVisited := THashSet<string>.Create;
   fSnapshot := TSnapshot.Create;
   fSnapshots := TSnapshotManager.Create;
-  fMoveStack := TList<TMove>.Create;
+  fMoveStack := TList<TSolverMove>.Create;
 end;
 
 destructor TDFSSolver.Destroy;
@@ -107,6 +108,25 @@ begin
       Exit(False);
 end;
 
+function TDFSSolver.FlattenMoveStack: TArray<TMove>;
+var
+  moves: TList<TMove>;
+  unrolled: TArray<TMove>;
+begin
+  moves := TList<TMove>.Create;
+  try
+    for var i := 0 to fMoveStack.Count - 1 do
+    begin
+      unrolled := fMoveStack[i].Unroll;
+      for var j := 0 to High(unrolled) do
+        moves.Add(unrolled[j]);
+    end;
+    Result := moves.ToArray;
+  finally
+    moves.Free;
+  end;
+end;
+
 function TDFSSolver.DoSearch(aTable: TTable): Boolean;
 begin
   Inc(fNodesExplored);
@@ -123,7 +143,7 @@ begin
 
   if IsSolved(aTable) then
   begin
-    fSolution := fMoveStack.ToArray;
+    fSolution := FlattenMoveStack;
     Exit(True);
   end;
 
@@ -139,11 +159,11 @@ begin
   if (fNodesExplored mod 1000) = 0 then
     NotifyProgress(fNodesExplored);
 
-  var sortedMoves: TArray<TMove> := [];
+  var sortedMoves: TArray<TSolverMove> := [];
 
-  var moveList := TMoveList.Create;
+  var moveList := TList<TSolverMove>.Create;
   try
-    TMoveGenerator.GenerateMoves(aTable, moveList);
+    TMoveGenerator.GenerateSolverMoves(aTable, moveList);
     SortMoves(aTable, moveList, sortedMoves);
   finally
     moveList.Free;
@@ -158,7 +178,7 @@ begin
     fMoveStack.Add(sortedMoves[i]);
     Inc(fDepth);
 
-    TMoveExecutor.ExecuteMove(aTable, sortedMoves[i]);
+    TMoveExecutor.ExecuteSolverMove(aTable, sortedMoves[i]);
     if DoSearch(aTable) then
       Exit(True);
 
@@ -174,7 +194,8 @@ begin
   Result := False;
 end;
 
-procedure TDFSSolver.SortMoves(aTable: TTable; aMoveList: TMoveList; var Sorted: TArray<TMove>);
+procedure TDFSSolver.SortMoves(aTable: TTable; aMoveList: TList<TSolverMove>;
+  var Sorted: TArray<TSolverMove>);
 type
   TScoredMove = record
     MoveIndex: Integer;
@@ -194,23 +215,17 @@ begin
 
     var scoredMoves := TList<TScoredMove>.Create();
     try
-      // test and score moves
+      // apply and score complete solver moves
       for var i := 0 to aMoveList.Count - 1 do
       begin
-        if TMoveValidator.IsValidMove(aMoveList[i], aTable) then
-        begin
+        fSnapshot.Restore(scratch);
+        TMoveExecutor.ExecuteSolverMove(scratch, aMoveList[i]);
+        var score := THeuristic.Score(scratch);
 
-          // start from saved state, apply move and score
-          fSnapshot.Restore(scratch);
-          TMoveExecutor.ExecuteMove(scratch, aMoveList[i]);
-          var score := THeuristic.Score(scratch);
-
-          // save
-          var scored := Default(TScoredMove);
-          scored.MoveIndex := i;
-          scored.Score := score;
-          scoredMoves.Add(scored);
-        end;
+        var scored := Default(TScoredMove);
+        scored.MoveIndex := i;
+        scored.Score := score;
+        scoredMoves.Add(scored);
       end;
 
       // sort by score ascending (lowest = closest to goal = try first)
@@ -226,7 +241,6 @@ begin
         end
       ));
 
-      //
       SetLength(Sorted, scoredMoves.Count);
       for var i := 0 to scoredMoves.Count - 1 do
         Sorted[i] := aMoveList[scoredMoves[i].MoveIndex];

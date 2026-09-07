@@ -59,14 +59,20 @@ var
   targetId: TStackId;
   sm: TSolverMove;
   key: string;
+
   // helper to emit solver move for a given exposed card if legal
   procedure EmitIfLegal(const card: TCard);
+  var
+    tableau: TStackIterator;
+    targetTop: TCard;
+    targetIsValid: Boolean;
   begin
     // foundation move
     if IsNextFoundationCard(card, aTable) then
     begin
       targetId := SuitToStackId(card.Suit);
-      key := Format('%s_F_%d_%d_%d_%d', [card.AsTwoCode, Ord(targetId), currentRecycle, draws[0], draws[1]]);
+      key := Format('%s_F_%d_%d_%d_%d_%d',
+        [card.AsTwoCode, Ord(targetId), currentRecycle, draws[0], draws[1], draws[2]]);
       if not seen.Contains(key) then
       begin
         seen.Add(key);
@@ -79,21 +85,38 @@ var
       end;
     end;
 
-    // tableau move(s)
-    if FindTableauTarget(card, aTable, targetId) then
-    begin
-      key := Format('%s_T_%d_%d_%d_%d', [card.AsTwoCode, Ord(targetId), currentRecycle, draws[0], draws[1]]);
-      if not seen.Contains(key) then
+    // tableau moves
+    tableau.Init(siTableau1, siTableau7);
+    repeat
+      targetId := tableau.Current;
+      targetIsValid := False;
+
+      // king can only go to an empty tableau
+      if card.Value = cvKing then
+        targetIsValid := aTable.Stacks[targetId].IsEmpty
+      else if aTable.Stacks[targetId].HasCards then
       begin
-        seen.Add(key);
-        sm.Move := NewMove(siWaste, targetId, 1);
-        sm.DrawsBeforeRecycle1 := draws[0];
-        sm.DrawsAfterRecycle1 := draws[1];
-        sm.DrawsAfterRecycle2 := draws[2];
-        sm.RecycleCount := currentRecycle;
-        aList.Add(sm);
+        targetTop := aTable.Stacks[targetId].Last;
+        targetIsValid := (targetTop.Color = card.OppositeColor) and
+          (targetTop.Value = Succ(card.Value));
       end;
-    end;
+
+      if targetIsValid then
+      begin
+        key := Format('%s_T_%d_%d_%d_%d_%d',
+          [card.AsTwoCode, Ord(targetId), currentRecycle, draws[0], draws[1], draws[2]]);
+        if not seen.Contains(key) then
+        begin
+          seen.Add(key);
+          sm.Move := NewMove(siWaste, targetId, 1);
+          sm.DrawsBeforeRecycle1 := draws[0];
+          sm.DrawsAfterRecycle1 := draws[1];
+          sm.DrawsAfterRecycle2 := draws[2];
+          sm.RecycleCount := currentRecycle;
+          aList.Add(sm);
+        end;
+      end;
+    until not tableau.MoveNext;
   end;
 
 begin

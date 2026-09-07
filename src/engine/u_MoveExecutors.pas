@@ -76,10 +76,8 @@ begin
 end;
 
 class procedure TMoveExecutor.ExecuteSolverMove(aTable: TTable; aMove: TSolverMove);
-var
-  m: TMove;
 begin
-  for m in aMove.Unroll do
+  for var m in aMove.Unroll do
     ExecuteMove(aTable, m);
 end;
 
