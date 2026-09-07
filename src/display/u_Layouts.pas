@@ -66,8 +66,9 @@ begin
     Origins[stackid] := PointF(ColX, TopRowY);
   end;
 
-  // Waste aligns with tableau column 5 (index 4), spans into column 6
-  Origins[siWaste] := PointF(Margin + 4 * (CardWidth + ColGap), TopRowY);
+  // Waste sits from ~column 5 1/3 to ~6 2/3, nudged right off the Spades
+  // foundation so a spade on the waste doesn't crowd it
+  Origins[siWaste] := PointF(Margin + (4 + 1/3) * (CardWidth + ColGap), TopRowY);
 
   // Stock aligns with tableau column 7 (index 6)
   Origins[siStock] := PointF(Margin + 6 * (CardWidth + ColGap), TopRowY);

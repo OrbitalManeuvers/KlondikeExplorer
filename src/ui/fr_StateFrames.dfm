@@ -1,8 +1,11 @@
 inherited StateFrame: TStateFrame
-  Width = 284
-  ExplicitWidth = 284
+  Width = 317
+  Height = 474
+  ExplicitWidth = 317
+  ExplicitHeight = 474
   inherited pnlBackground: TPanel
-    Width = 284
+    Width = 317
+    Height = 474
     ExplicitWidth = 284
     object lblTitle: TLabel
       Left = 16
@@ -18,26 +21,105 @@ inherited StateFrame: TStateFrame
       ParentFont = False
     end
     object btnShelve: TSpeedButton
-      Left = 16
+      Left = 12
       Top = 33
-      Width = 73
-      Height = 25
+      Width = 69
+      Height = 27
       Caption = 'Shelve'
       OnClick = btnShelveClick
     end
     object btnUnshelve: TSpeedButton
-      Left = 96
+      Left = 84
       Top = 33
-      Width = 73
-      Height = 25
+      Width = 68
+      Height = 27
       Caption = 'Unshelve'
       OnClick = btnUnshelveClick
+    end
+    object btnPlayerView: TSpeedButton
+      Left = 168
+      Top = 33
+      Width = 30
+      Height = 27
+      AllowAllUp = True
+      GroupIndex = 1
+      Down = True
+      Caption = 'P'
+      OnClick = ViewClick
+    end
+    object btnDFSView: TSpeedButton
+      Left = 196
+      Top = 33
+      Width = 30
+      Height = 27
+      AllowAllUp = True
+      GroupIndex = 2
+      Caption = 'D'
+      OnClick = ViewClick
+    end
+    object btnAStarView: TSpeedButton
+      Left = 224
+      Top = 33
+      Width = 30
+      Height = 27
+      AllowAllUp = True
+      GroupIndex = 3
+      Caption = 'A*'
+      OnClick = ViewClick
+    end
+    object btnBeamView: TSpeedButton
+      Left = 252
+      Top = 33
+      Width = 30
+      Height = 27
+      AllowAllUp = True
+      GroupIndex = 4
+      Caption = 'B'
+      OnClick = ViewClick
+    end
+    object Label1: TLabel
+      Left = 8
+      Top = 445
+      Width = 102
+      Height = 17
+      Anchors = [akLeft, akBottom]
+      Caption = 'Invoke from here:'
+    end
+    object btnDFSInvoke: TSpeedButton
+      Tag = 2
+      Left = 116
+      Top = 440
+      Width = 53
+      Height = 27
+      Anchors = [akLeft, akBottom]
+      Caption = 'DFS'
+      OnClick = InvokeClick
+    end
+    object btnAStarInvoke: TSpeedButton
+      Tag = 3
+      Left = 175
+      Top = 440
+      Width = 53
+      Height = 27
+      Anchors = [akLeft, akBottom]
+      Caption = 'A*'
+      OnClick = InvokeClick
+    end
+    object btnBeamInvoke: TSpeedButton
+      Tag = 4
+      Left = 234
+      Top = 440
+      Width = 53
+      Height = 27
+      Anchors = [akLeft, akBottom]
+      Caption = 'Beam'
+      OnClick = InvokeClick
     end
     object StateTree: TVirtualDrawTree
       Left = 12
       Top = 64
-      Width = 258
-      Height = 401
+      Width = 291
+      Height = 370
       Anchors = [akLeft, akTop, akRight, akBottom]
       Colors.BorderColor = 2697513
       Colors.DisabledColor = clGray

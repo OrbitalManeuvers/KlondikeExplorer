@@ -17,6 +17,14 @@ type
     StateTree: TVirtualDrawTree;
     btnShelve: TSpeedButton;
     btnUnshelve: TSpeedButton;
+    btnPlayerView: TSpeedButton;
+    btnDFSView: TSpeedButton;
+    btnAStarView: TSpeedButton;
+    btnBeamView: TSpeedButton;
+    Label1: TLabel;
+    btnDFSInvoke: TSpeedButton;
+    btnAStarInvoke: TSpeedButton;
+    btnBeamInvoke: TSpeedButton;
     procedure TreeInitNode(Sender: TBaseVirtualTree; ParentNode, Node: PVirtualNode;
       var InitialStates: TVirtualNodeInitStates);
     procedure TreeInitChildren(Sender: TBaseVirtualTree; Node: PVirtualNode;
@@ -34,6 +42,8 @@ type
       Column: TColumnIndex);
     procedure btnShelveClick(Sender: TObject);
     procedure btnUnshelveClick(Sender: TObject);
+    procedure ViewClick(Sender: TObject);
+    procedure InvokeClick(Sender: TObject);
   private
     fStateManager: TStateManager;
     fOnNavigate: TNodeNavigateEvent;
@@ -44,6 +54,7 @@ type
     function CurrentRootState: TStateNode;
     function IsDescendantOf(aNode, aAncestor: TStateNode): Boolean;
     procedure UpdateControls;
+    procedure InvokeFromHere(aAuthor: TAuthor);
   public
     procedure InitContent; override;
     procedure DoneContent; override;
@@ -59,7 +70,8 @@ implementation
 
 {$R *.dfm}
 
-uses Vcl.Themes;
+uses Vcl.Themes, System.IOUtils,
+  u_BasicSolvers, u_SolverTypes, u_MoveHelpers;
 
 type
   TStateNodeData = record
@@ -75,6 +87,20 @@ begin
   fShelves := TStack<TStateNode>.Create;
   StateTree.NodeDataSize := SizeOf(TStateNodeData);
   UpdateControls;
+
+  btnPlayerView.Tag := Ord(auPlayer);
+  btnDFSView.Tag := Ord(auDFS);
+  btnDFSInvoke.Tag := Ord(auDFS);
+
+  btnAStarView.Tag := Ord(auAStar);
+  btnAStarInvoke.Tag := Ord(auAStar);
+
+  btnBeamView.Tag := Ord(auBeam);
+  btnBeamInvoke.Tag := Ord(auBeam);
+
+  // this frame requires the state manager. Until InitContent is called, content frames aren't
+  // expected to do anything, so Assigned(fStateManager) should be considered settled
+  Assert(Assigned(fStateManager));
 end;
 
 procedure TStateFrame.DoneContent;
@@ -88,6 +114,55 @@ begin
   fStateManager := Value;
 end;
 
+procedure TStateFrame.InvokeClick(Sender: TObject);
+begin
+  if not (Sender is TSpeedButton) then
+    Exit;
+
+  var b := TSpeedButton(Sender);
+  var author := TAuthor(b.Tag);
+  InvokeFromHere(author);
+
+end;
+
+procedure TStateFrame.InvokeFromHere(aAuthor: TAuthor);
+begin
+
+  var solver := TDFSSolver.Create;
+  try
+    var limits := Default(TSolverLimits);
+    limits.MaxNodes := 500000;
+
+
+    var snapshot := TSnapshot.Create;
+    try
+      SnapshotManager.Load(fStateManager.Cursor.Token, snapshot);
+      var solverResult := solver.Solve(snapshot);
+
+      if (solverResult.Result = srSolved) and TDirectory.Exists(LogPath) then
+      begin
+        var fileName := TPath.Combine(Self.LogPath, 'solver-moves.txt');
+        var moves := TStringList.Create;
+        try
+          for var m in solverResult.Moves do
+            moves.Add(m.AsText);
+
+          moves.SaveToFile(fileName);
+
+        finally
+          moves.Free;
+        end;
+      end;
+
+    finally
+      snapshot.Free;
+    end;
+
+  finally
+    solver.Free;
+  end;
+end;
+
 procedure TStateFrame.HandleMoveExecuted(Sender: TObject; aMove: TMove);
 begin
   //
@@ -97,10 +172,8 @@ function TStateFrame.CurrentRootState: TStateNode;
 begin
   if (fShelves.Count > 0) then
     Result := fShelves.Peek
-  else if Assigned(fStateManager) then
-    Result := fStateManager.RootNode
   else
-    Result := nil;
+    Result := fStateManager.RootNode;
 end;
 
 function TStateFrame.IsDescendantOf(aNode, aAncestor: TStateNode): Boolean;
@@ -117,20 +190,38 @@ end;
 
 procedure TStateFrame.UpdateControls;
 begin
+  btnDFSInvoke.Enabled := False;
+  btnAStarInvoke.Enabled := False;
+  btnBeamInvoke.Enabled := False;
+
   btnUnshelve.Enabled := fShelves.Count > 0;
 
   var currentRoot := CurrentRootState;
-  if Assigned(fStateManager) and Assigned(fStateManager.Cursor) and Assigned(currentRoot) then
+  if Assigned(currentRoot) then
     btnShelve.Enabled := fStateManager.Cursor <> currentRoot
   else
     btnShelve.Enabled := False;
+
+  btnDFSInvoke.Enabled := True;
+  btnAStarInvoke.Enabled := True;
+  btnBeamInvoke.Enabled := True;
+end;
+
+procedure TStateFrame.ViewClick(Sender: TObject);
+begin
+  if Sender is TSpeedButton then
+  begin
+//    var btn := TSpeedButton(Sender);
+//    btn.GroupIndex
+
+
+
+  end;
+  //
 end;
 
 procedure TStateFrame.btnShelveClick(Sender: TObject);
 begin
-  if not (Assigned(fStateManager) and Assigned(fStateManager.Cursor)) then
-    Exit;
-
   var currentRoot := CurrentRootState;
   if fStateManager.Cursor = currentRoot then
     Exit;
@@ -166,9 +257,7 @@ begin
     fUpdatingTree := False;
   end;
 
-  if Assigned(fStateManager) and Assigned(fStateManager.Cursor) then
-    HandleCursorChange(fStateManager.Cursor, nil);
-
+  HandleCursorChange(fStateManager.Cursor, nil);
   UpdateControls;
 end;
 

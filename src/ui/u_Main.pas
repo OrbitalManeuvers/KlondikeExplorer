@@ -85,7 +85,8 @@ implementation
 {$R *.dfm}
 
 uses System.IOUtils, Vcl.Themes,
-  u_MoveValidators, d_SaveSnapshotDlg, u_Heuristics, u_Authors, d_About;
+  u_MoveValidators, d_SaveSnapshotDlg, u_Heuristics, u_Authors, d_About,
+  u_MoveHelpers;
 
 
 { Utility }
@@ -291,7 +292,7 @@ begin
     Exit;
 
   var moveIndex := StateManager.Cursor.Moves.IndexOfMove(m);
-  Assert(moveIndex <> -1); // an auto-move must exist in the cursor's generated move list
+  Assert(moveIndex <> -1, 'No auto-move found for ' + m.AsText); // an auto-move must exist in the cursor's generated move list
   StateManager.ExecuteMoveAtCursor(moveIndex, auPlayer);
 end;
 

@@ -62,7 +62,8 @@ uses
   u_MoveEvaluators in 'games\u_MoveEvaluators.pas',
   u_HintValidators in 'games\u_HintValidators.pas',
   u_CardPools in 'solvers\u_CardPools.pas',
-  d_About in 'ui\d_About.pas' {AboutBox};
+  d_About in 'ui\d_About.pas' {AboutBox},
+  u_CanonicalState in 'solvers\u_CanonicalState.pas';
 
 {$R *.res}
 
