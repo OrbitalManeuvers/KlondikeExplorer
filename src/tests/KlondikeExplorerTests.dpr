@@ -34,7 +34,10 @@ uses
   u_CanonicalStateTests in 'u_CanonicalStateTests.pas',
   u_MoveGenerators in '..\engine\u_MoveGenerators.pas',
   u_MoveGeneratorTests in 'u_MoveGeneratorTests.pas',
-  u_MoveLists in '..\engine\u_MoveLists.pas';
+  u_MoveLists in '..\engine\u_MoveLists.pas',
+  u_SnapshotComposerTests in 'u_SnapshotComposerTests.pas',
+  u_SnapshotComposers in '..\engine\u_SnapshotComposers.pas',
+  u_CardHelperTests in 'u_CardHelperTests.pas';
 
 var
   runner: ITestRunner;

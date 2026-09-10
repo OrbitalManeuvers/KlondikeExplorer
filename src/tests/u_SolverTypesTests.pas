@@ -1,4 +1,4 @@
-unit u_SolverTypesTests;
+﻿unit u_SolverTypesTests;
 
 interface
 
@@ -129,7 +129,7 @@ begin
   // then the board move sends it to Foundation (Hearts).
   fTable.Clear;
   TTestUtils.PlaceStockCards(fTable,
-    [NewCard(cvAce, csHearts)]);
+    [TCard.NewCard(cvAce, csHearts)]);
 
   sm := Default(TSolverMove);
   sm.Move.Source := siWaste;
@@ -157,11 +157,11 @@ begin
   // Recycle moves it to stock, one draw puts it back on waste,
   // then the board move places it on tableau 1's black 6.
   fTable.Clear;
-  fTable.Waste.Add(NewCard(cvFive, csHearts));
+  fTable.Waste.Add(TCard.NewCard(cvFive, csHearts));
 
   TTestUtils.PlaceTableauRun(fTable, 1,
     [],                                        // no face-down cards
-    [NewCard(cvSix, csClubs)]);                // one face-up black 6
+    [TCard.NewCard(cvSix, csClubs)]);                // one face-up black 6
 
   sm := Default(TSolverMove);
   sm.Move.Source := siWaste;

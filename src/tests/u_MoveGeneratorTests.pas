@@ -51,7 +51,7 @@ begin
   // not six.
   fTable.Clear;
   TTestUtils.PlaceTableauRun(fTable, 1, [],
-    [NewCard(cvKing, csSpades)]);
+    [TCard.NewCard(cvKing, csSpades)]);
 
   moves := TList<TSolverMove>.Create;
   try
@@ -81,7 +81,7 @@ begin
   // King of Hearts in the stock, all 7 tableaus empty.
   // After draw, only one king-to-empty move should be emitted.
   fTable.Clear;
-  fTable.Stock.Add(NewCard(cvKing, csHearts));
+  fTable.Stock.Add(TCard.NewCard(cvKing, csHearts));
 
   moves := TList<TSolverMove>.Create;
   try

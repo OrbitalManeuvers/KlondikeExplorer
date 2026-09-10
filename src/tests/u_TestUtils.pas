@@ -32,8 +32,8 @@ uses System.Classes, System.SysUtils, u_Utils,
 class procedure TTestUtils.PopulateFoundation(aTable: TTable;
   aSuit: TCardSuit; aUpTo: TCardValue);
 begin
-  var firstCard := NewCard(cvAce, aSuit);
-  var lastCard := NewCard(aUpTo, aSuit);
+  var firstCard := TCard.NewCard(cvAce, aSuit);
+  var lastCard := TCard.NewCard(aUpTo, aSuit);
   for var card := Ord(firstCard) to Ord(lastCard) do
     aTable.Foundation[aSuit].Add(card);
 end;

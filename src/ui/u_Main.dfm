@@ -185,6 +185,10 @@ object MainForm: TMainForm
           item
             Items = <
               item
+                Action = actSnapshotComposer
+                Caption = '&Snapshot Composer...'
+              end
+              item
                 Action = actAbout
                 Caption = '&About...'
               end>
@@ -238,6 +242,11 @@ object MainForm: TMainForm
       Caption = 'New Game'
       ShortCut = 16462
       OnExecute = actNewGameExecute
+    end
+    object actSnapshotComposer: TAction
+      Category = 'Help'
+      Caption = 'Snapshot Composer...'
+      OnExecute = actSnapshotComposerExecute
     end
   end
 end

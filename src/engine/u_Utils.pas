@@ -13,7 +13,7 @@ function OppositeColor(aColor: TCardColor): TCardColor;
 { record initializers }
 function NewMove(aMove: TMove): TMove; overload;
 function NewMove(aSource, aTarget: TStackId; aCount: Integer): TMove; overload;
-function NewCard(aValue: TCardValue; aSuit: TCardSuit): TCard;
+//function NewCard(aValue: TCardValue; aSuit: TCardSuit): TCard;
 function NewSeed(const Name: string; Value: Integer): TSeed;
 
 

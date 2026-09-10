@@ -53,18 +53,18 @@ begin
   // on column 3 (all other columns empty).
   fTable.Clear;
   TTestUtils.PlaceTableauRun(fTable, 1, [],
-    [NewCard(cvKing, csSpades)]);
+    [TCard.NewCard(cvKing, csSpades)]);
   TTestUtils.PlaceTableauRun(fTable, 3, [],
-    [NewCard(cvQueen, csHearts)]);
+    [TCard.NewCard(cvQueen, csHearts)]);
 
   cs1.Capture(fTable);
 
   // Now swap: Queen of Hearts on column 1, King of Spades on column 3.
   fTable.Clear;
   TTestUtils.PlaceTableauRun(fTable, 1, [],
-    [NewCard(cvQueen, csHearts)]);
+    [TCard.NewCard(cvQueen, csHearts)]);
   TTestUtils.PlaceTableauRun(fTable, 3, [],
-    [NewCard(cvKing, csSpades)]);
+    [TCard.NewCard(cvKing, csSpades)]);
 
   cs2.Capture(fTable);
 
@@ -96,14 +96,14 @@ var
 begin
   fTable.Clear;
   TTestUtils.PlaceStockCards(fTable,
-    [NewCard(cvFive, csHearts)]);
+    [TCard.NewCard(cvFive, csHearts)]);
   fTable.RecycleCount := 0;
   cs1.Capture(fTable);
 
   // Same cards, different recycle count
   fTable.Clear;
   TTestUtils.PlaceStockCards(fTable,
-    [NewCard(cvFive, csHearts)]);
+    [TCard.NewCard(cvFive, csHearts)]);
   fTable.RecycleCount := 1;
   cs2.Capture(fTable);
 
@@ -118,9 +118,9 @@ begin
   // Capture the same state twice and verify the hash is identical.
   fTable.Clear;
   TTestUtils.PlaceTableauRun(fTable, 2, [],
-    [NewCard(cvJack, csDiamonds), NewCard(cvTen, csClubs)]);
+    [TCard.NewCard(cvJack, csDiamonds), TCard.NewCard(cvTen, csClubs)]);
   TTestUtils.PlaceStockCards(fTable,
-    [NewCard(cvAce, csSpades)]);
+    [TCard.NewCard(cvAce, csSpades)]);
   TTestUtils.PopulateFoundation(fTable, csHearts, cvTwo);
 
   cs1.Capture(fTable);

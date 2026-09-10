@@ -43,7 +43,7 @@ uses
   u_Observers in 'solvers\u_Observers.pas',
   u_SolverTypes in 'solvers\u_SolverTypes.pas',
   u_BasicSolvers in 'solvers\u_BasicSolvers.pas',
-  u_SnapshotLibraries in 'ui\u_SnapshotLibraries.pas',
+  u_SnapshotLibraries in 'engine\u_SnapshotLibraries.pas',
   u_HintGenerators in 'games\u_HintGenerators.pas',
   u_AStarSolvers in 'solvers\u_AStarSolvers.pas',
   u_DealCreators in 'games\u_DealCreators.pas',
@@ -51,19 +51,21 @@ uses
   fr_ContentFrames in 'ui\fr_ContentFrames.pas' {ContentFrame: TFrame},
   fr_ResetFrames in 'ui\fr_ResetFrames.pas' {ResetFrame: TFrame},
   fr_TableFrames in 'ui\fr_TableFrames.pas' {TableFrame: TFrame},
-  u_SaveFiles in 'ui\u_SaveFiles.pas',
+  u_SaveFiles in 'engine\u_SaveFiles.pas',
   fr_GraphFrames in 'ui\fr_GraphFrames.pas' {GraphFrame: TFrame},
   fr_StateFrames in 'ui\fr_StateFrames.pas' {StateFrame: TFrame},
   fr_MoveFrames in 'ui\fr_MoveFrames.pas' {MoveFrame: TFrame},
-  u_StateManagers in 'ui\u_StateManagers.pas',
+  u_StateManagers in 'engine\u_StateManagers.pas',
   d_SaveSnapshotDlg in 'ui\d_SaveSnapshotDlg.pas' {SaveSnapshotDlg},
-  u_Authors in 'ui\u_Authors.pas',
+  u_Authors in 'engine\u_Authors.pas',
   u_AutoMovers in 'engine\u_AutoMovers.pas',
   u_MoveEvaluators in 'games\u_MoveEvaluators.pas',
   u_HintValidators in 'games\u_HintValidators.pas',
   u_CardPools in 'solvers\u_CardPools.pas',
   d_About in 'ui\d_About.pas' {AboutBox},
-  u_CanonicalState in 'solvers\u_CanonicalState.pas';
+  u_CanonicalState in 'solvers\u_CanonicalState.pas',
+  u_SnapshotComposers in 'engine\u_SnapshotComposers.pas',
+  d_SnapshotComposerDlg in 'ui\d_SnapshotComposerDlg.pas' {SnapshotComposerDlg};
 
 {$R *.res}
 

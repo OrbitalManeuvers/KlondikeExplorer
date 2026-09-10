@@ -33,16 +33,17 @@ type
     RightColumn: TPanel;
     RightColumnSplitShape: TShape;
     HSplitter: TSplitter;
+    actSnapshotComposer: TAction;
     procedure actOpenGameAccept(Sender: TObject);
     procedure actSaveGameAsAccept(Sender: TObject);
     procedure actSaveGameExecute(Sender: TObject);
-    procedure actTestsExecute(Sender: TObject);
     procedure actAboutExecute(Sender: TObject);
     procedure actNewGameExecute(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormDestroy(Sender: TObject);
+    procedure actSnapshotComposerExecute(Sender: TObject);
   private
     InitialState: TSnapshot;
     SaveFile: TSaveFile;
@@ -86,7 +87,7 @@ implementation
 
 uses System.IOUtils, Vcl.Themes,
   u_MoveValidators, d_SaveSnapshotDlg, u_Heuristics, u_Authors, d_About,
-  u_MoveHelpers;
+  u_MoveHelpers, d_SnapshotComposerDlg;
 
 
 { Utility }
@@ -100,7 +101,7 @@ procedure TMainForm.FormCreate(Sender: TObject);
 begin
 
   // !!!
-  RandSeed := 101; // this will come out
+  RandSeed := 101; // this will come out eventually
 
   InitialState := TSnapshot.Create;
 
@@ -390,9 +391,19 @@ begin
   //
 end;
 
-procedure TMainForm.actTestsExecute(Sender: TObject);
+procedure TMainForm.actSnapshotComposerExecute(Sender: TObject);
 begin
-  //
+  var d := TSnapshotComposerDlg.Create(Application);
+  try
+    if d.Execute(SnapshotLibrary) then
+    begin
+      //
+    end;
+
+  finally
+    d.Free;
+  end;
+
 end;
 
 end.

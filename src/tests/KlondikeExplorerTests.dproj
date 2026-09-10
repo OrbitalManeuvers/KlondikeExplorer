@@ -48,6 +48,7 @@
         <DCC_S>false</DCC_S>
         <DCC_F>false</DCC_F>
         <DCC_K>false</DCC_K>
+        <DCC_Assertions>true</DCC_Assertions>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <SanitizedProjectName>KlondikeExplorerTests</SanitizedProjectName>
     </PropertyGroup>
@@ -120,6 +121,9 @@
         <DCCReference Include="..\engine\u_MoveGenerators.pas"/>
         <DCCReference Include="u_MoveGeneratorTests.pas"/>
         <DCCReference Include="..\engine\u_MoveLists.pas"/>
+        <DCCReference Include="u_SnapshotComposerTests.pas"/>
+        <DCCReference Include="..\engine\u_SnapshotComposers.pas"/>
+        <DCCReference Include="u_CardHelperTests.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

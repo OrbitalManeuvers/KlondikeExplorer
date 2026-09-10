@@ -26,6 +26,9 @@ type
     function Matches(aValue: TCardValue; aColor: TCardColor): Boolean; overload;
     function Matches(aDescriptor: TCardDescriptor): Boolean; overload;
     function IsTwin(aValue: TCard): Boolean;
+
+    class function NewCard(aValue: TCardValue; aSuit: TCardSuit): TCard; static;
+    class function TryParseTwoCode(const aCode: string; out aValue: TCard): Boolean; static;
   end;
 
 implementation
@@ -129,11 +132,37 @@ begin
   Result := Self.Matches(aDescriptor.Value, aDescriptor.Color);
 end;
 
+class function TCardHelper.NewCard(aValue: TCardValue; aSuit: TCardSuit): TCard;
+begin
+  Result := (Ord(aSuit) * (Ord(High(TCardValue)) + 1)) + Ord(aValue);
+end;
+
 function TCardHelper.IsTwin(aValue: TCard): Boolean;
 begin
   Result := (aValue.Color = Self.Color) and (aValue.Value = Self.Value);
 end;
 
+class function TCardHelper.TryParseTwoCode(const aCode: string; out aValue: TCard): Boolean;
+begin
+  Result := False;
+
+  var s := aCode.Trim.ToUpper;
+  if s.Length = 2 then
+  begin
+    for var cv := Low(TCardValue) to High(TCardValue) do
+      if s[1] = short_value_names[cv] then
+      begin
+        for var cs := Low(TCardSuit) to High(TCardSuit) do
+          if s[2] = short_suit_names[cs] then
+          begin
+            aValue := TCard.NewCard(cv, cs);
+            Exit(True);
+          end;
+      end;
+  end;
+
+
+end;
 
 end.
 

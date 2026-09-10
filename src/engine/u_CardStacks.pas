@@ -140,6 +140,7 @@ end;
 procedure TCardStack.Clear;
 begin
   fCards.Clear;
+  fFaceUpCount := 0;
 end;
 
 procedure TCardStack._AddFrom(aSource: TCardStack);

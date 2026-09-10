@@ -41,8 +41,7 @@ uses
   u_CardPools,
   u_CardHelpers,
   u_SolverTypes,
-  u_Types,
-  u_Utils;
+  u_Types;
 
 constructor TCardPoolTests.Create;
 begin
@@ -65,9 +64,9 @@ begin
   Table.Clear;
   Table.RecycleCount := 2;
 
-  Table.Stock.Add(NewCard(cvAce, csHearts));
-  Table.Stock.Add(NewCard(cvEight, csClubs));
-  Table.Stock.Add(NewCard(cvNine, csClubs));
+  Table.Stock.Add(TCard.NewCard(cvAce, csHearts));
+  Table.Stock.Add(TCard.NewCard(cvEight, csClubs));
+  Table.Stock.Add(TCard.NewCard(cvNine, csClubs));
 
   moves := TList<TSolverMove>.Create;
   try
@@ -95,7 +94,7 @@ begin
   Table.RecycleCount := 2; // No additional recycles allowed
 
   // Ace of Spades on waste - can move to foundation without any draws
-  Table.Waste.Add(NewCard(cvAce, csSpades));
+  Table.Waste.Add(TCard.NewCard(cvAce, csSpades));
 
   moves := TList<TSolverMove>.Create;
   try
@@ -143,7 +142,7 @@ begin
   Table.RecycleCount := 2; // No additional recycles allowed
 
   // Single Ace in stock - one draw exposes it
-  Table.Stock.Add(NewCard(cvAce, csHearts));
+  Table.Stock.Add(TCard.NewCard(cvAce, csHearts));
 
   moves := TList<TSolverMove>.Create;
   try
@@ -171,7 +170,7 @@ begin
   Table.RecycleCount := 2; // No additional recycles allowed
 
   // King of Hearts in stock - one draw exposes it, can go to any empty tableau
-  Table.Stock.Add(NewCard(cvKing, csHearts));
+  Table.Stock.Add(TCard.NewCard(cvKing, csHearts));
 
   moves := TList<TSolverMove>.Create;
   try
@@ -198,11 +197,11 @@ begin
   Table.RecycleCount := 2; // No additional recycles allowed
 
   // Set up two tableaus with black 6s on top
-  Table.Stacks[siTableau1].Add(NewCard(cvSix, csClubs));
-  Table.Stacks[siTableau3].Add(NewCard(cvSix, csSpades));
+  Table.Stacks[siTableau1].Add(TCard.NewCard(cvSix, csClubs));
+  Table.Stacks[siTableau3].Add(TCard.NewCard(cvSix, csSpades));
 
   // 5 of Hearts in stock - can go to both tableaus after one draw
-  Table.Stock.Add(NewCard(cvFive, csHearts));
+  Table.Stock.Add(TCard.NewCard(cvFive, csHearts));
 
   moves := TList<TSolverMove>.Create;
   try
