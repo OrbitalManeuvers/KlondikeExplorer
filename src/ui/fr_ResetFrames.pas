@@ -26,8 +26,10 @@ type
   private
     fOnRestart: TRestartEvent;
     procedure UpdateControls;
+    procedure ReloadSnapshots;
   public
     procedure InitContent; override;
+    procedure HandleSnapshotLibraryChanged; override;
     property OnRestart: TRestartEvent read fOnRestart write fOnRestart;
   end;
 
@@ -44,16 +46,38 @@ uses System.IOUtils,
 procedure TResetFrame.InitContent;
 begin
   inherited;
+  ReloadSnapshots;
+  UpdateControls;
+end;
+
+procedure TResetFrame.HandleSnapshotLibraryChanged;
+begin
+  inherited;
+  ReloadSnapshots;
+end;
+
+// rebuild the combo from the library, keeping the current selection if that
+// same name still exists, otherwise falling back to the first item
+procedure TResetFrame.ReloadSnapshots;
+begin
+  var selectedName := '';
+  if cbSnapshots.ItemIndex >= 0 then
+    selectedName := cbSnapshots.Items[cbSnapshots.ItemIndex];
+
   cbSnapshots.Items.BeginUpdate;
   try
+    cbSnapshots.Items.Clear;
     for var i := 0 to SnapshotLibrary.Count - 1 do
       cbSnapshots.Items.Add(SnapshotLibrary.Names[i]);
-    if cbSnapshots.Items.Count > 0 then
+
+    var restored := cbSnapshots.Items.IndexOf(selectedName);
+    if restored >= 0 then
+      cbSnapshots.ItemIndex := restored
+    else if cbSnapshots.Items.Count > 0 then
       cbSnapshots.ItemIndex := 0;
   finally
     cbSnapshots.Items.EndUpdate;
   end;
-  UpdateControls;
 end;
 
 procedure TResetFrame.MethodClick(Sender: TObject);

@@ -46,7 +46,7 @@ object SnapshotComposerDlg: TSnapshotComposerDlg
     Font.Name = 'Consolas'
     Font.Style = []
     Lines.Strings = (
-      'T1: - - 4D')
+      'C:2')
     ParentFont = False
     TabOrder = 1
   end

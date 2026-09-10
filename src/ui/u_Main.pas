@@ -61,6 +61,7 @@ type
     function SnapshotLibraryFileName(): string;
     procedure RestartTo(aSnapshot: TSnapshot);
     procedure HandleSnapshotManagerChange(Sender: TObject);
+    procedure HandleSnapshotLibraryChange(Sender: TObject);
     procedure HandleResetFrameRestart(Sender: TObject; NewState: TSnapshot);
     procedure HandleTableAction(Sender: TObject; aTableAction: TTableAction);
     procedure HandleCardClick(Sender: TObject; aStackId: TStackId; aCardIndex: Integer);
@@ -109,6 +110,7 @@ begin
   SnapshotManager.OnChange := HandleSnapshotManagerChange;
 
   SnapshotLibrary := TSnapshotLibrary.Create;
+  SnapshotLibrary.OnChange := HandleSnapshotLibraryChange;
   var fileName := SnapshotLibraryFileName();
   if TFile.Exists(fileName) then
     SnapshotLibrary.LoadFromFile(fileName);
@@ -134,6 +136,7 @@ begin
   DoneContentFrames;
 
   SnapshotManager.OnChange := nil;
+  SnapshotLibrary.OnChange := nil;
 
   if SnapshotLibrary.Modified then
   begin
@@ -252,6 +255,12 @@ procedure TMainForm.HandleSnapshotManagerChange(Sender: TObject);
 begin
   if Assigned(SnapshotManager) then
     StatusBar.SimpleText := SnapshotManager.Storage.Stats.AsText;
+end;
+
+procedure TMainForm.HandleSnapshotLibraryChange(Sender: TObject);
+begin
+  for var f in ContentFrames do
+    f.HandleSnapshotLibraryChanged;
 end;
 
 procedure TMainForm.HandleStateNavigate(Sender: TObject; aNode: TStateNode);

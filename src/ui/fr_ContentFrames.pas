@@ -32,6 +32,9 @@ type
     // aSnapshot is the cursor's table already expanded by the main form
     procedure HandleCursorChange(aNode: TStateNode; aSnapshot: TSnapshot); virtual;
 
+    // snapshot library changed (base does nothing; views override)
+    procedure HandleSnapshotLibraryChanged; virtual;
+
     property SnapshotManager: TSnapshotManager read fSnapshotManager write fSnapshotManager;
     property SnapshotLibrary: TSnapshotLibrary read fSnapshotLibrary write fSnapshotLibrary;
     property LogPath: string read fLogPath write fLogPath;
@@ -65,6 +68,11 @@ begin
 end;
 
 procedure TContentFrame.HandleCursorChange(aNode: TStateNode; aSnapshot: TSnapshot);
+begin
+  // descendants can override as needed
+end;
+
+procedure TContentFrame.HandleSnapshotLibraryChanged;
 begin
   // descendants can override as needed
 end;

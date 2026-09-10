@@ -75,7 +75,7 @@ uses System.Classes, System.SysUtils, System.StrUtils,
 // helper functions
 function TextToStackId(const value: string): TStackId;
 const
-  stack_names: array[TStackId] of string = ('st', 'wa', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 'f1', 'f2', 'f3', 'f4');
+  stack_names: array[TStackId] of string = ('st', 'wa', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 'h', 'd', 'c', 's');
 begin
   var index := System.StrUtils.IndexText(value, stack_names);
   Result := TStackId(index);
@@ -102,7 +102,9 @@ end;
 
 procedure TDeckPool.Remove(aCard: TCard);
 begin
-  // to do
+  var index := fCards.IndexOf(aCard);
+  Assert(index >= 0, 'card not in pool: ' + aCard.AsTwoCode);
+  fCards.Delete(index);
 end;
 
 function TDeckPool.TakeAny: TCard;
@@ -181,29 +183,56 @@ begin
 
   aSlotSpec.Stack := TextToStackId(parts[0]);
 
-  var cardList := SplitString(parts[1], ' ');
-  for var cardName in cardList do
+  if aSlotSpec.Stack in [siFoundation1..siFoundation4] then
   begin
-    var trimmed := Trim(cardName);
-    if not trimmed.IsEmpty then
+    // foundations spec as a single card .Value
+    // To parse this we'll take the suit character from a valid twocode for the same stack,
+    // append that onto the user's text, and try to parse that as a twocode.
+    var suit := u_Utils.StackIdToSuit(aSlotSpec.Stack);
+    var ace := TCard.NewCard(cvAce, suit);
+    var modelCardText := ace.AsTwoCode;
+
+    var userCardText := parts[1] + modelCardText[2];
+    var userCard: TCard;
+
+    if TCard.TryParseTwoCode(userCardText, userCard) then
     begin
-      // trailing '-' marks the card face down; strip it before parsing the twocode
-      var faceDown := trimmed.EndsWith('-');
-      if faceDown then
-        trimmed := Trim(trimmed.Substring(0, trimmed.Length - 1));
+      // the cards that belong in this list are ace -> userCard
+      // small protection against a wild loop
+      Assert((userCard >= ace) and (userCard <= ace + 12));
+      SetLength(aSlotSpec.Cards, (userCard - ace) + 1);
+      for var c := ace to userCard do
+        aSlotSpec.Cards[c - ace] := c;
+      aSlotSpec.FaceupCount := Length(aSlotSpec.Cards);
+    end;
 
-      // face-up is a single contiguous top run: once a face-up card appears,
-      // nothing beneath it (later in the list) may be face down.
-      Assert(not (faceDown and (aSlotSpec.FaceUpCount > 0)), 'face-down card above a face-up card');
-
-      var c: TCard;
-      if TCard.TryParseTwoCode(trimmed, c) then
+  end
+  else
+  begin
+    var cardList := SplitString(parts[1], ' ');
+    for var cardName in cardList do
+    begin
+      var trimmed := Trim(cardName);
+      if not trimmed.IsEmpty then
       begin
-        var count := Length(aSlotSpec.Cards);
-        SetLength(aSlotSpec.Cards, count + 1);
-        aSlotSpec.Cards[count] := c;
-        if not faceDown then
-          Inc(aSlotSpec.FaceUpCount);
+        // trailing '-' marks the card face down; strip it before parsing the twocode
+        var faceDown := trimmed.EndsWith('-');
+        if faceDown then
+          trimmed := Trim(trimmed.Substring(0, trimmed.Length - 1));
+
+        // face-up is a single contiguous top run: once a face-up card appears,
+        // nothing beneath it (later in the list) may be face down.
+        Assert(not (faceDown and (aSlotSpec.FaceUpCount > 0)), 'face-down card above a face-up card');
+
+        var c: TCard;
+        if TCard.TryParseTwoCode(trimmed, c) then
+        begin
+          var count := Length(aSlotSpec.Cards);
+          SetLength(aSlotSpec.Cards, count + 1);
+          aSlotSpec.Cards[count] := c;
+          if not faceDown then
+            Inc(aSlotSpec.FaceUpCount);
+        end;
       end;
     end;
   end;
@@ -291,33 +320,18 @@ begin
   // with everything else
   for var slot in aSpec.Slots do
   begin
-    // foundation columns have special handling since they have required cards
-    if slot.Stack in [siFoundation1..siFoundation4] then
-    begin
-      for var c in slot.Cards do
-      begin
-        var start := TCard.NewCard(cvAce, c.Suit);
-        for var required := start to c do
-          fPool.Remove(required);
-      end;
-    end
-    else
-    begin
-      // all other types just remove what was authored
-      for var target in slot.Cards do
-        fPool.Remove(target);
-    end;
+    for var target in slot.Cards do
+      fPool.Remove(target);
   end;
 
   // foundations first. All foundation cards are already removed from the pool.
   for var i := 0 to Length(aSpec.Slots) - 1 do
     if aSpec.Slots[i].Stack in [siFoundation1..siFoundation4] then
     begin
-      var target := aSpec.Slots[i].Cards[0];
-      Assert(target.Suit = StackIdToSuit(aSpec.Slots[i].Stack));
-      var start := TCard.NewCard(cvAce, target.Suit);
-      for var fillerCard := start to target do
-        aTable.Foundation[target.Suit].Add(fillerCard);
+      var suit := StackIdToSuit(aSpec.Slots[i].Stack);
+      for var c in aSpec.Slots[i].cards do
+        aTable.Foundation[suit].Add(c);
+      aTable.Foundation[suit].FaceUpCount := aTable.Foundation[suit].Count;
     end;
 
   // waste: two arbitrary cards, then the authored card on top

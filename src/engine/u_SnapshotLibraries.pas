@@ -2,7 +2,7 @@ unit u_SnapshotLibraries;
 
 interface
 
-uses System.Generics.Collections,
+uses System.Classes, System.Generics.Collections,
   u_Snapshots;
 
 type
@@ -15,6 +15,7 @@ type
   private
     fEntries: TList<TSnapshotEntry>;
     fModified: Boolean;
+    fOnChange: TNotifyEvent;
     function GetCount: Integer;
     function GetName(I: Integer): string;
   public
@@ -30,6 +31,7 @@ type
     property Count: Integer read GetCount;
     property Names[I: Integer]: string read GetName;
     property Modified: Boolean read fModified;
+    property OnChange: TNotifyEvent read fOnChange write fOnChange;
   end;
 
 implementation
@@ -72,6 +74,9 @@ begin
   Entry.Contents := aSnapshot.AsText;
   fEntries.Add(Entry);
   fModified := True;
+
+  if Assigned(fOnChange) then
+    fOnChange(Self);
 end;
 
 function TSnapshotLibrary.IndexOfName(const aName: string): Integer;
